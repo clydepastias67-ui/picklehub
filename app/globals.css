@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* ── DARK THEME (default) ── */
+:root, [data-theme="dark"] {
+  --bg-primary:     #0f0f0f;
+  --bg-secondary:   #161616;
+  --bg-tertiary:    #1e1e1e;
+  --bg-hover:       #222222;
+
+  --text-primary:   #ffffff;
+  --text-secondary: #aaaaaa;
+  --text-muted:     #555555;
+  --text-hint:      #333333;
+
+  --border:         #1e1e1e;
+  --border-hover:   #333333;
+  --border-focus:   #639922;
+
+  --accent:         #639922;
+  --accent-hover:   #7ab82a;
+  --accent-light:   #97C459;
+  --accent-bg:      rgba(99, 153, 34, 0.12);
+  --accent-border:  rgba(99, 153, 34, 0.4);
+
+  --success-bg:     rgba(99, 153, 34, 0.1);
+  --success-border: rgba(99, 153, 34, 0.3);
+  --success-text:   #97C459;
+
+  --error-bg:       rgba(226, 75, 74, 0.1);
+  --error-border:   rgba(226, 75, 74, 0.3);
+  --error-text:     #f09595;
+
+  --warning-bg:     rgba(186, 117, 23, 0.15);
+  --warning-text:   #EF9F27;
+
+  --nav-bg:         #111111;
+  --card-bg:        #161616;
+  --input-bg:       #161616;
+  --sidebar-bg:     #111111;
+}
+
+/* ── LIGHT THEME ── */
+[data-theme="light"] {
+  --bg-primary:     #f8f8f6;
+  --bg-secondary:   #ffffff;
+  --bg-tertiary:    #f0f0ec;
+  --bg-hover:       #e8e8e4;
+
+  --text-primary:   #1a1a1a;
+  --text-secondary: #444444;
+  --text-muted:     #888888;
+  --text-hint:      #bbbbbb;
+
+  --border:         #e0e0da;
+  --border-hover:   #cccccc;
+  --border-focus:   #639922;
+
+  --accent:         #4a7a18;
+  --accent-hover:   #5a8a22;
+  --accent-light:   #639922;
+  --accent-bg:      rgba(74, 122, 24, 0.08);
+  --accent-border:  rgba(74, 122, 24, 0.3);
+
+  --success-bg:     rgba(74, 122, 24, 0.08);
+  --success-border: rgba(74, 122, 24, 0.25);
+  --success-text:   #3a6a10;
+
+  --error-bg:       rgba(200, 50, 50, 0.08);
+  --error-border:   rgba(200, 50, 50, 0.25);
+  --error-text:     #c03030;
+
+  --warning-bg:     rgba(160, 100, 10, 0.1);
+  --warning-text:   #a06410;
+
+  --nav-bg:         #ffffff;
+  --card-bg:        #ffffff;
+  --input-bg:       #f5f5f2;
+  --sidebar-bg:     #f0f0ec;
+}
+
+/* ── BASE STYLES ── */
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Barlow Condensed', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background 0.3s, color 0.3s;
+}
+
+/* Smooth transitions for theme switching */
+*, *::before, *::after {
+  transition: background-color 0.3s, border-color 0.3s, color 0.15s;
+}
+
+/* Override transition for animations that shouldn't be affected */
+[class*="animate-"],
+[style*="animation"] {
+  transition: none !important;
+}
