@@ -40,7 +40,7 @@ export async function POST(req: Request) {
 
     // Send email to all admins
     await resend.emails.send({
-      from: 'PickleHub <alerts@pickelhub.com>',
+      from: 'PickleHub <onboarding@resend.dev>',
       to: adminEmails,
       subject,
       html: `

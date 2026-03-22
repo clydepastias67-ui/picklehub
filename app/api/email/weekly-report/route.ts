@@ -80,7 +80,7 @@ export async function POST(req: Request) {
       </tr>`;
 
     await resend.emails.send({
-      from: 'PickleHub <reports@pickelhub.com>',
+      from: 'PickleHub <onboarding@resend.dev>',
       to: adminEmails,
       subject,
       html: `

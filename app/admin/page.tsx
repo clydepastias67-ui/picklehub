@@ -337,7 +337,14 @@ export default function AdminDashboard() {
         </nav>
         <div style={{padding:'12px 16px',borderTop:'1px solid var(--border)',display:'flex',flexDirection:'column',gap:8,flexShrink:0}}>
           <ThemeToggle />
-          <a href="/dashboard" style={{display:'block',textAlign:'center',fontFamily:"'Barlow Condensed',sans-serif",fontSize:12,color:'var(--text-muted)',textDecoration:'none',padding:'4px 0'}}>← Player dashboard</a>
+          <div style={{display:'flex',gap:8}}>
+            <a href="/dashboard" style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:4,padding:'7px 8px',borderRadius:8,border:'1px solid var(--border)',fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:700,color:'var(--text-muted)',textDecoration:'none',textTransform:'uppercase',letterSpacing:'0.04em',transition:'all .2s'}}>
+              👤 Player
+            </a>
+            <a href="/employee" style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:4,padding:'7px 8px',borderRadius:8,border:'1px solid var(--border)',fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,fontWeight:700,color:'var(--text-muted)',textDecoration:'none',textTransform:'uppercase',letterSpacing:'0.04em',transition:'all .2s'}}>
+              👷 Staff
+            </a>
+          </div>
           <button className="signout-btn" onClick={handleSignOut}>Sign out</button>
         </div>
       </div>
