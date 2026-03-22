@@ -1,10 +1,16 @@
 import './globals.css';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { ThemeProvider } from '@/lib/ThemeProvider';
 
 export const metadata: Metadata = {
   title: 'PickleHub — Book Courts, Play More',
   description: 'The all-in-one pickleball hub. Book courts, hire coaches, rent gear, order food, and join tournaments.',
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
