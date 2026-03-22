@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { ThemeToggle } from '@/lib/ThemeToggle';
+import { redirectToPayment } from '@/lib/usePayMongo';
 
 type MenuItem = {
   id: string;
@@ -75,20 +76,26 @@ export default function FoodPage() {
     setPlacing(true); setError('');
     try {
       const supabase = createClient();
-      const { error } = await supabase.from('food_orders').insert({
+      const { data: orderData, error } = await supabase.from('food_orders').insert({
         user_id: user.id,
         booking_id: selectedBooking || null,
         items: cart.map(c => ({ id: c.item.id, name: c.item.name, qty: c.qty, price: c.item.price })),
         total_price: cartTotal,
         delivery_type: deliveryType,
         status: 'pending',
-      });
+      }).select().single();
       if (error) throw error;
-      setOrderSuccess(true);
-      setCart([]);
+      // Redirect to PayMongo
+      await redirectToPayment({
+        amount: cartTotal,
+        description: `PickleHub Food Order - ${cart.map(c => c.item.name).join(', ')}`,
+        referenceId: orderData.id,
+        type: 'food',
+      });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Order failed. Please try again.');
-    } finally { setPlacing(false); }
+      setPlacing(false);
+    }
   };
 
   const filtered = activeCategory === 'all' ? menuItems : menuItems.filter(m => m.category === activeCategory);
@@ -264,7 +271,13 @@ export default function FoodPage() {
                   const qty = getQty(item.id);
                   return (
                     <div key={item.id} className="menu-card" style={{ animationDelay: `${i * 0.06}s` }}>
-                      <div className="menu-img">{categoryEmoji[item.category] || '🍽️'}</div>
+                      <div className="menu-img">
+                        {item.image_url ? (
+                          <img src={item.image_url} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <span>{categoryEmoji[item.category] || '🍽️'}</span>
+                        )}
+                      </div>
                       <div className="menu-body">
                         <div className="menu-name">{item.name}</div>
                         <div className="menu-desc">{item.description || item.category}</div>

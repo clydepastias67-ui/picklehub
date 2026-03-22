@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { ThemeToggle } from '@/lib/ThemeToggle';
+import { redirectToPayment } from '@/lib/usePayMongo';
 
 type Court = { id:string; name:string; description:string; type:'indoor'|'outdoor'; price_per_hour:number; is_available:boolean; image_url?:string; };
 type Coach = { id:string; name:string; skill_level:string; price_per_session:number; };
@@ -101,10 +102,17 @@ export default function CourtsPage() {
       if (bookingError) throw bookingError;
       if (selectedCoach&&bookingData) await supabase.from('coaching_sessions').insert({ coach_id:selectedCoach.id, user_id:user.id, session_time:startTime.toISOString(), price:selectedCoach.price_per_session, status:'pending' });
       if (selectedFood.length>0&&bookingData) await supabase.from('food_orders').insert({ user_id:user.id, booking_id:bookingData.id, items:selectedFood.map(f=>({id:f.item.id,name:f.item.name,qty:f.qty,price:f.item.price})), total_price:foodTotal, delivery_type:'court', status:'pending' });
-      setBookingSuccess(true);
+      // Redirect to PayMongo
+      await redirectToPayment({
+        amount: grandTotal,
+        description: `PickleHub Court Booking - ${selectedCourt.name} on ${selectedDate}`,
+        referenceId: bookingData.id,
+        type: 'booking',
+      });
     } catch (err:unknown) {
       setError(err instanceof Error ? err.message : 'Booking failed. Please try again.');
-    } finally { setBooking(false); }
+      setBooking(false);
+    }
   };
 
   const filteredCourts = courts.filter(c=>filterType==='all'||c.type===filterType);

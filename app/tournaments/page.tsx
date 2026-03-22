@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { ThemeToggle } from '@/lib/ThemeToggle';
+import { redirectToPayment } from '@/lib/usePayMongo';
 
 type Tournament = {
   id: string;
@@ -65,19 +66,30 @@ export default function TournamentsPage() {
     setRegistering(tournament.id); setError('');
     try {
       const supabase = createClient();
-      const { error } = await supabase.from('tournament_registrations').insert({
+      const { data: regData, error } = await supabase.from('tournament_registrations').insert({
         tournament_id: tournament.id,
         user_id: user.id,
-      });
+      }).select().single();
       if (error) throw error;
       setRegistrations(prev => [...prev, { tournament_id: tournament.id }]);
       setCounts(prev => ({ ...prev, [tournament.id]: (prev[tournament.id] || 0) + 1 }));
-      setSuccessId(tournament.id);
-      setTimeout(() => setSuccessId(''), 3000);
+      // Only redirect to PayMongo if there's an entry fee
+      if (tournament.entry_fee > 0) {
+        await redirectToPayment({
+          amount: tournament.entry_fee,
+          description: `PickleHub Tournament - ${tournament.name}`,
+          referenceId: regData.id,
+          type: 'tournament',
+        });
+      } else {
+        setSuccessId(tournament.id);
+        setTimeout(() => setSuccessId(''), 3000);
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Registration failed.');
       setTimeout(() => setError(''), 3000);
-    } finally { setRegistering(''); }
+      setRegistering('');
+    }
   };
 
   const handleUnregister = async (tournamentId: string) => {

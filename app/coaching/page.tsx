@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { ThemeToggle } from '@/lib/ThemeToggle';
+import { redirectToPayment } from '@/lib/usePayMongo';
 
 type Coach = {
   id: string;
@@ -45,18 +46,25 @@ export default function CoachingPage() {
     try {
       const supabase = createClient();
       const sessionDateTime = new Date(`${sessionDate}T${sessionTime}:00`);
-      const { error } = await supabase.from('coaching_sessions').insert({
+      const { data: sessionData, error } = await supabase.from('coaching_sessions').insert({
         coach_id: selectedCoach.id,
         user_id: user.id,
         session_time: sessionDateTime.toISOString(),
         price: selectedCoach.price_per_session,
         status: 'pending',
-      });
+      }).select().single();
       if (error) throw error;
-      setSuccess(true);
+      // Redirect to PayMongo
+      await redirectToPayment({
+        amount: selectedCoach.price_per_session,
+        description: `PickleHub Coaching Session - ${selectedCoach.name} on ${sessionDate}`,
+        referenceId: sessionData.id,
+        type: 'coaching',
+      });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Booking failed. Please try again.');
-    } finally { setBooking(false); }
+      setBooking(false);
+    }
   };
 
   const filtered = filter === 'all' ? coaches : coaches.filter(c => c.skill_level === filter);
