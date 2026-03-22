@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { ThemeToggle } from '@/lib/ThemeToggle';
 import Navbar from '@/lib/Navbar';
+import { redirectToPayment } from '@/lib/usePayMongo';
 
 type Product = {
   id: string;
@@ -72,6 +73,8 @@ export default function ShopPage() {
     setPlacing(true); setError('');
     try {
       const supabase = createClient();
+
+      // 1 — Insert all orders and get their IDs back
       const orders = cart.map(c => ({
         user_id: user.id,
         product_id: c.product.id,
@@ -80,13 +83,37 @@ export default function ShopPage() {
         total_price: ((c.type === 'rental' ? c.product.rental_price : c.product.price) || 0) * c.qty,
         status: 'pending',
       }));
-      const { error } = await supabase.from('shop_orders').insert(orders);
-      if (error) throw error;
-      setOrderSuccess(true);
-      setCart([]);
+      const { data: orderData, error: orderError } = await supabase
+        .from('shop_orders')
+        .insert(orders)
+        .select();
+      if (orderError) throw orderError;
+
+      // 2 — Decrement stock for purchase items only (not rentals)
+      const purchaseItems = cart.filter(c => c.type === 'purchase');
+      await Promise.all(purchaseItems.map(async c => {
+        const newStock = Math.max(0, c.product.stock - c.qty);
+        await supabase
+          .from('products')
+          .update({ stock: newStock })
+          .eq('id', c.product.id);
+      }));
+
+      // 3 — Redirect to PayMongo using first order ID as reference
+      // We create one combined payment for the whole cart
+      const firstOrderId = orderData[0]?.id;
+      const itemNames = cart.map(c => `${c.product.name} (${c.type})`).join(', ');
+      await redirectToPayment({
+        amount: cartTotal,
+        description: `PickleHub Shop — ${itemNames}`,
+        referenceId: firstOrderId,
+        type: 'shop',
+      });
+
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Order failed. Please try again.');
-    } finally { setPlacing(false); }
+      setPlacing(false);
+    }
   };
 
   const categories = ['all', 'rackets', 'balls', 'apparel', 'accessories'] as const;
