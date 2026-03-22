@@ -121,11 +121,7 @@ export default function LandingPage() {
           <div style={{ width:10, height:10, background:'var(--accent)', borderRadius:'50%', animation:'pulse-dot 2s ease infinite' }} />
           <span style={{ fontSize:20, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em' }}>PickleHub</span>
         </div>
-        <div style={{ display:'flex', gap:32, alignItems:'center' }}>
-          {['Courts','Coaching','Tournaments','Shop','Food'].map(item => (
-            <a key={item} href={`/${item.toLowerCase()}`} className="nav-link">{item}</a>
-          ))}
-        </div>
+
         <div style={{ display:'flex', gap:12, alignItems:'center' }}>
           <ThemeToggle />
           {user ? (
