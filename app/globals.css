@@ -1,5 +1,3 @@
-@import "tailwindcss";
-
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -16,33 +14,26 @@ html {
   --bg-secondary:   #161616;
   --bg-tertiary:    #1e1e1e;
   --bg-hover:       #222222;
-
   --text-primary:   #ffffff;
   --text-secondary: #aaaaaa;
   --text-muted:     #555555;
   --text-hint:      #333333;
-
   --border:         #1e1e1e;
   --border-hover:   #333333;
   --border-focus:   #639922;
-
   --accent:         #639922;
   --accent-hover:   #7ab82a;
   --accent-light:   #97C459;
   --accent-bg:      rgba(99, 153, 34, 0.12);
   --accent-border:  rgba(99, 153, 34, 0.4);
-
   --success-bg:     rgba(99, 153, 34, 0.1);
   --success-border: rgba(99, 153, 34, 0.3);
   --success-text:   #97C459;
-
   --error-bg:       rgba(226, 75, 74, 0.1);
   --error-border:   rgba(226, 75, 74, 0.3);
   --error-text:     #f09595;
-
   --warning-bg:     rgba(186, 117, 23, 0.15);
   --warning-text:   #EF9F27;
-
   --nav-bg:         #111111;
   --card-bg:        #161616;
   --input-bg:       #161616;
@@ -55,33 +46,26 @@ html {
   --bg-secondary:   #ffffff;
   --bg-tertiary:    #f0f0ec;
   --bg-hover:       #e8e8e4;
-
   --text-primary:   #1a1a1a;
   --text-secondary: #444444;
   --text-muted:     #888888;
   --text-hint:      #bbbbbb;
-
   --border:         #e0e0da;
   --border-hover:   #cccccc;
   --border-focus:   #639922;
-
   --accent:         #4a7a18;
   --accent-hover:   #5a8a22;
   --accent-light:   #639922;
   --accent-bg:      rgba(74, 122, 24, 0.08);
   --accent-border:  rgba(74, 122, 24, 0.3);
-
   --success-bg:     rgba(74, 122, 24, 0.08);
   --success-border: rgba(74, 122, 24, 0.25);
   --success-text:   #3a6a10;
-
   --error-bg:       rgba(200, 50, 50, 0.08);
   --error-border:   rgba(200, 50, 50, 0.25);
   --error-text:     #c03030;
-
   --warning-bg:     rgba(160, 100, 10, 0.1);
   --warning-text:   #a06410;
-
   --nav-bg:         #ffffff;
   --card-bg:        #ffffff;
   --input-bg:       #f5f5f2;
@@ -96,14 +80,176 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background 0.3s, color 0.3s;
+  overflow-x: hidden;
 }
 
-/* Smooth transitions for theme switching */
+/* ── GLOBAL RESPONSIVE FIXES ── */
+
+/* Prevent horizontal overflow on all elements */
+img, video, iframe, embed, object {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Tables scroll horizontally on mobile */
+table {
+  min-width: 100%;
+}
+
+.table-scroll-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── RESPONSIVE NAVBAR ── */
+.nav-desktop-links {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+.nav-mobile-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 4px;
+}
+
+@media (max-width: 768px) {
+  .nav-desktop-links {
+    display: none;
+  }
+  .nav-mobile-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* ── RESPONSIVE GRID HELPERS ── */
+.grid-responsive-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.grid-responsive-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.grid-responsive-4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 1024px) {
+  .grid-responsive-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .grid-responsive-2,
+  .grid-responsive-3,
+  .grid-responsive-4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── RESPONSIVE LAYOUT HELPERS ── */
+.sidebar-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .sidebar-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── RESPONSIVE PADDING ── */
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+@media (max-width: 768px) {
+  .page-container {
+    padding: 20px 16px;
+  }
+}
+
+/* ── RESPONSIVE TEXT ── */
+.hero-title-responsive {
+  font-size: clamp(40px, 10vw, 120px);
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
+/* ── CARD GRIDS ── */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 480px) {
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── MOBILE FIXES ── */
+@media (max-width: 768px) {
+  /* Reduce font sizes on mobile */
+  .section-title-lg {
+    font-size: clamp(24px, 6vw, 52px) !important;
+  }
+
+  /* Stack flex items on mobile */
+  .flex-mobile-stack {
+    flex-direction: column !important;
+  }
+
+  /* Full width buttons on mobile */
+  .btn-mobile-full {
+    width: 100% !important;
+  }
+
+  /* Hide on mobile */
+  .hide-mobile {
+    display: none !important;
+  }
+
+  /* Show only on mobile */
+  .show-mobile {
+    display: block !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .show-mobile {
+    display: none !important;
+  }
+}
+
+/* Smooth theme transition */
 *, *::before, *::after {
   transition: background-color 0.3s, border-color 0.3s, color 0.15s;
 }
 
-/* Override transition for animations that shouldn't be affected */
 [class*="animate-"],
 [style*="animation"] {
   transition: none !important;

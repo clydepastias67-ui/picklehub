@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { ThemeToggle } from '@/lib/ThemeToggle';
 import { redirectToPayment } from '@/lib/usePayMongo';
+import Navbar from '@/lib/Navbar';
 
 type Court = { id:string; name:string; description:string; type:'indoor'|'outdoor'; price_per_hour:number; is_available:boolean; image_url?:string; };
 type Coach = { id:string; name:string; skill_level:string; price_per_session:number; };
@@ -193,19 +194,8 @@ export default function CourtsPage() {
       `}</style>
 
       {/* NAV */}
-      <nav style={{background:'var(--nav-bg)',borderBottom:'1px solid var(--border)',padding:'0 32px',height:60,display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:50}}>
-        <a href="/" style={{display:'flex',alignItems:'center',gap:8,textDecoration:'none',color:'var(--text-primary)'}}>
-          <div style={{width:8,height:8,background:'var(--accent)',borderRadius:'50%'}}/>
-          <span style={{fontSize:18,fontWeight:800,textTransform:'uppercase',letterSpacing:'0.06em'}}>PickleHub</span>
-        </a>
-        <div style={{display:'flex',gap:20,alignItems:'center'}}>
-          {['Food','Shop','Coaching','Tournaments'].map(l=>(
-            <a key={l} href={`/${l.toLowerCase()}`} style={{fontFamily:"'Barlow',sans-serif",fontSize:13,color:'var(--text-muted)',textDecoration:'none',transition:'color .2s'}}>{l}</a>
-          ))}
-          <a href="/dashboard" style={{fontFamily:"'Barlow',sans-serif",fontSize:13,color:'var(--accent)',textDecoration:'none'}}>Dashboard</a>
-          <ThemeToggle />
-        </div>
-      </nav>
+      <Navbar activeLink="/courts" />
+
 
       <div style={{maxWidth:1200,margin:'0 auto',padding:'32px 24px'}}>
 

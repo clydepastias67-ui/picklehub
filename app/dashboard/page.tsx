@@ -41,7 +41,7 @@ export default function PlayerDashboard() {
   const handleSignOut = async () => { const supabase = createClient(); await supabase.auth.signOut(); window.location.href = '/'; };
   const formatDate = (d:string) => new Date(d).toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'});
   const formatTime = (d:string) => new Date(d).toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'});
-  const totalSpent = bookings.reduce((s,b)=>s+(b.total_price||0),0);
+  const totalSpent = bookings.filter(b=>b.status==='confirmed').reduce((s,b)=>s+(b.total_price||0),0);
   const confirmedBookings = bookings.filter(b=>b.status==='confirmed').length;
   const upcomingBookings = bookings.filter(b=>new Date(b.start_time)>new Date()).length;
 
