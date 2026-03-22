@@ -64,20 +64,24 @@ export default function PlayerDashboard() {
   );
 
   return (
-    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", background:'var(--bg-primary)', color:'var(--text-primary)', minHeight:'100vh', display:'flex' }}>
+    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", background:'var(--bg-primary)', color:'var(--text-primary)', minHeight:'100vh' }}>
       <style>{`
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
         @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
         @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 
+        /* DESKTOP: sidebar layout */
         .sidebar{width:220px;background:var(--sidebar-bg);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:50;transition:transform .3s;}
-        .main{margin-left:220px;flex:1;min-height:100vh;min-width:0;}
+        .main{margin-left:220px;min-height:100vh;}
+
+        /* MOBILE: no sidebar, full width content, bottom nav */
         @media(max-width:768px){
-          .sidebar{transform:translateX(-100%);}
-          .sidebar.open{transform:translateX(0);}
-          .main{margin-left:0;width:100%;max-width:100%;overflow-x:hidden;}
+          .sidebar{display:none;}
+          .sidebar.open{display:flex;transform:none;}
+          .main{margin-left:0 !important;width:100% !important;}
           .mobile-topbar{display:flex !important;}
+          .bottom-nav{display:flex !important;}
         }
 
         .nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:500;color:var(--text-muted);cursor:pointer;transition:all .2s;text-decoration:none;margin:1px 8px;}
@@ -113,6 +117,14 @@ export default function PlayerDashboard() {
         .signout-btn:hover{border-color:var(--accent);color:var(--text-primary);}
 
         .section-card{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px;animation:fadeUp .5s ease both;width:100%;min-width:0;overflow:hidden;}
+
+        /* BOTTOM NAV for mobile */
+        .bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--nav-bg);border-top:1px solid var(--border);z-index:100;height:60px;align-items:center;justify-content:space-around;padding:0 8px;}
+        .bottom-nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 12px;border-radius:8px;cursor:pointer;transition:all .2s;flex:1;border:none;background:transparent;}
+        .bottom-nav-item.active .bnav-icon{color:var(--accent);}
+        .bottom-nav-item.active .bnav-label{color:var(--accent);}
+        .bnav-icon{font-size:18px;line-height:1;}
+        .bnav-label{font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-muted);font-family:'Barlow Condensed',sans-serif;}
         .add-btn{background:var(--accent);color:#fff;padding:8px 16px;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;transition:background .2s;}
         .add-btn:hover{background:var(--accent-hover);}
       `}</style>
@@ -176,7 +188,7 @@ export default function PlayerDashboard() {
 
       {/* MAIN */}
       <div className="main">
-        <div style={{ padding:'clamp(16px,4vw,32px) clamp(12px,3vw,32px) 64px', maxWidth:'100%', overflowX:'hidden' }}>
+        <div style={{ padding:'clamp(16px,4vw,32px) clamp(12px,3vw,32px) 80px', maxWidth:'100%', overflowX:'hidden' }}>
           <div style={{ marginBottom:24, animation:'fadeUp .5s ease both', width:'100%' }}>
             <div style={{ fontSize:11, fontFamily:"'Barlow',sans-serif", color:'var(--accent)', letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:6 }}>
               {new Date().toLocaleDateString('en-PH',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}

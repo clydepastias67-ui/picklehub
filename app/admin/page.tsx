@@ -189,7 +189,7 @@ export default function AdminDashboard() {
   if (!isAdmin) return null;
 
   return (
-    <div style={{fontFamily:"'Barlow Condensed',sans-serif",background:'var(--bg-primary)',color:'var(--text-primary)',minHeight:'100vh',display:'flex'}}>
+    <div style={{fontFamily:"'Barlow Condensed',sans-serif",background:'var(--bg-primary)',color:'var(--text-primary)',minHeight:'100vh'}}>
       <style>{`
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
         @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
@@ -197,12 +197,13 @@ export default function AdminDashboard() {
         @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 
         .sidebar{width:230px;background:var(--sidebar-bg);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:50;transition:transform .3s;overflow-y:auto;}
-        .main{margin-left:230px;flex:1;min-height:100vh;min-width:0;}
+        .main{margin-left:230px;min-height:100vh;}
         @media(max-width:900px){
-          .sidebar{transform:translateX(-100%);}
-          .sidebar.open{transform:translateX(0);}
-          .main{margin-left:0 !important;width:100% !important;max-width:100vw !important;overflow-x:hidden !important;}
+          .sidebar{display:none;}
+          .sidebar.open{display:flex;transform:none;}
+          .main{margin-left:0 !important;width:100% !important;}
           .mobile-bar{display:flex !important;}
+          .admin-bottom-nav{display:flex !important;}
         }
 
         .nav-item{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;color:var(--text-muted);cursor:pointer;transition:all .2s;margin:1px 8px;text-transform:uppercase;letter-spacing:.04em;}
@@ -267,6 +268,13 @@ export default function AdminDashboard() {
 
         .mobile-bar{display:none;background:var(--nav-bg);border-bottom:1px solid var(--border);padding:0 20px;height:52px;align-items:center;justify-content:space-between;width:100%;}
 
+        /* Admin bottom nav */
+        .admin-bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--nav-bg);border-top:1px solid var(--border);z-index:100;height:60px;align-items:center;justify-content:space-around;padding:0 4px;}
+        .abn-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;cursor:pointer;flex:1;border:none;background:transparent;transition:all .2s;}
+        .abn-item.active .abn-label{color:var(--accent);}
+        .abn-icon{font-size:16px;line-height:1;}
+        .abn-label{font-size:8px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-muted);font-family:'Barlow Condensed',sans-serif;}
+
         .signout-btn{width:100%;background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:8px;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:all .2s;}
         .signout-btn:hover{border-color:var(--error-text);color:var(--error-text);}
 
@@ -325,7 +333,7 @@ export default function AdminDashboard() {
 
       {/* MAIN */}
       <div className="main">
-        <div style={{padding:'28px 28px 80px'}}>
+        <div style={{padding:'clamp(16px,3vw,28px) clamp(12px,3vw,28px) 80px'}}>
 
           {/* ── OVERVIEW ── */}
           {activeTab==='overview' && (
@@ -720,6 +728,22 @@ export default function AdminDashboard() {
 
       {actionMsg&&<div className="toast">{actionMsg}</div>}
       {sidebarOpen&&<div onClick={()=>setSidebarOpen(false)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.5)',zIndex:40}}/>}
+
+      {/* ADMIN BOTTOM NAV - mobile only */}
+      <div className="admin-bottom-nav">
+        {[
+          {id:'overview',icon:'▦',label:'Home'},
+          {id:'bookings',icon:'📅',label:'Bookings'},
+          {id:'courts',icon:'🏓',label:'Courts'},
+          {id:'menu',icon:'🍱',label:'Menu'},
+          {id:'admins',icon:'🔐',label:'Admins'},
+        ].map(item=>(
+          <button key={item.id} className={`abn-item ${activeTab===item.id?'active':''}`} onClick={()=>setActiveTab(item.id)}>
+            <span className="abn-icon">{item.icon}</span>
+            <span className="abn-label">{item.label}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
