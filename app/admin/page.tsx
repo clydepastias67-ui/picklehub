@@ -8,9 +8,10 @@ type Booking = { id:string; status:string; total_price:number; created_at:string
 type Court = { id:string; name:string; type:string; price_per_hour:number; is_available:boolean; image_url?:string; description?:string; };
 type Coach = { id:string; name:string; skill_level:string; price_per_session:number; is_available:boolean; bio?:string; };
 type MenuItem = { id:string; name:string; category:string; price:number; is_available:boolean; image_url?:string; description?:string; stock?:number; };
-type Product = { id:string; name:string; category:string; price?:number; rental_price?:number; stock:number; is_for_sale:boolean; is_for_rent:boolean; image_url?:string; description?:string; };
+type Product = { id:string; name:string; category:string; price?:number; rental_price?:number; stock:number; low_stock_threshold?:number; is_for_sale:boolean; is_for_rent:boolean; image_url?:string; description?:string; };
 type Tournament = { id:string; name:string; date:string; max_players:number; entry_fee:number; status:string; description?:string; };
 type Admin = { id:string; email:string; created_at:string; };
+type Employee = { id:string; email:string; name:string; role:string; created_at:string; };
 
 const TABS = [
   { id:'overview',    label:'Overview',      icon:'▦' },
@@ -21,6 +22,7 @@ const TABS = [
   { id:'coaching',    label:'Coaching',      icon:'👤' },
   { id:'tournaments', label:'Tournaments',   icon:'🏆' },
   { id:'admins',      label:'Admin users',   icon:'🔐' },
+  { id:'employees',   label:'Employees',     icon:'👷' },
 ];
 
 const EMPTY_COURT   = { name:'', type:'indoor', price_per_hour:0, is_available:true, description:'' };
@@ -43,6 +45,9 @@ export default function AdminDashboard() {
   const [products, setProducts] = useState<Product[]>([]);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [admins, setAdmins] = useState<Admin[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [newEmployee, setNewEmployee] = useState({ email:'', name:'', role:'staff' });
+  const [empMsg, setEmpMsg] = useState({ text:'', type:'' });
 
   const [editItem, setEditItem] = useState<Record<string,unknown>|null>(null);
   const [editTable, setEditTable] = useState('');
@@ -86,6 +91,7 @@ export default function AdminDashboard() {
       supabase.from('products').select('*').order('category'),
       supabase.from('tournaments').select('*').order('date',{ascending:false}),
       supabase.from('admins').select('*').order('created_at'),
+      supabase.from('employees').select('*').order('created_at'),
     ]);
     setBookings(b||[]); setCourts(c||[]); setCoaches(co||[]);
     setMenuItems(m||[]); setProducts(p||[]); setTournaments(t||[]); setAdmins(a||[]);
@@ -94,6 +100,20 @@ export default function AdminDashboard() {
   const toast = (msg:string) => { setActionMsg(msg); setTimeout(()=>setActionMsg(''),2500); };
 
   const handleSignOut = async () => { await supabase.auth.signOut(); window.location.href='/'; };
+
+  const handleAddEmployee = async () => {
+    if (!newEmployee.email.trim()||!newEmployee.name.trim()) return;
+    const {error} = await supabase.from('employees').insert({ email:newEmployee.email.trim(), name:newEmployee.name.trim(), role:newEmployee.role });
+    if (error) setEmpMsg({text:error.message,type:'error'});
+    else { setEmpMsg({text:`${newEmployee.name} added as employee!`,type:'success'}); setNewEmployee({email:'',name:'',role:'staff'}); await fetchAll(); }
+    setTimeout(()=>setEmpMsg({text:'',type:''}),3000);
+  };
+
+  const handleRemoveEmployee = async (id:string) => {
+    if (!confirm('Remove this employee?')) return;
+    await supabase.from('employees').delete().eq('id',id);
+    await fetchAll(); toast('Employee removed');
+  };
 
   const handleToggle = async (table:string, id:string, field:string, current:boolean) => {
     await supabase.from(table).update({[field]:!current}).eq('id',id);
@@ -344,6 +364,26 @@ export default function AdminDashboard() {
                   <h1 style={{fontSize:'clamp(24px,3vw,36px)',fontWeight:800,textTransform:'uppercase',lineHeight:1}}>Dashboard <span style={{color:'var(--accent)'}}>overview</span></h1>
                 </div>
               </div>
+              {/* Weekly report + email controls */}
+              <div style={{background:'var(--card-bg)',border:'1px solid var(--border)',borderRadius:12,padding:'14px 18px',marginBottom:20,display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10}}>
+                <div>
+                  <div style={{fontSize:13,fontWeight:700,textTransform:'uppercase'}}>Weekly report email</div>
+                  <div style={{fontFamily:"'Barlow',sans-serif",fontSize:12,color:'var(--text-muted)',marginTop:2}}>Auto-sent every Sunday 7PM · or trigger manually</div>
+                </div>
+                <button className="btn primary" onClick={async()=>{
+                  try {
+                    const res = await fetch('/api/email/weekly-report',{
+                      method:'POST',
+                      headers:{'Content-Type':'application/json','x-cron-secret':process.env.NEXT_PUBLIC_CRON_SECRET||''}
+                    });
+                    const d = await res.json();
+                    toast(d.success ? `✅ Report sent to ${d.sent_to} admin${d.sent_to>1?'s':''}!` : `❌ ${d.error||'Failed'}`);
+                  } catch(e) {
+                    toast('❌ Failed to send report');
+                  }
+                }}>Send now</button>
+              </div>
+
               <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(155px,1fr))',gap:12,marginBottom:24}}>
                 {[
                   {label:'Total revenue',val:`₱${totalRevenue.toLocaleString()}`,sub:'Confirmed only'},
@@ -520,7 +560,7 @@ export default function AdminDashboard() {
               </div>
               <div className="table-wrap">
                 <table className="tbl">
-                  <thead><tr><th>Image</th><th>Name</th><th>Category</th><th>Buy</th><th>Rent</th><th>Stock</th><th>Actions</th></tr></thead>
+                  <thead><tr><th>Image</th><th>Name</th><th>Category</th><th>Buy</th><th>Rent</th><th>Stock</th><th>Alert at</th><th>Actions</th></tr></thead>
                   <tbody>
                     {products.length===0?<tr><td colSpan={7}><div className="empty">No products yet — add one!</div></td></tr>:
                     products.map(p=>(
@@ -617,6 +657,44 @@ export default function AdminDashboard() {
                             <button className="btn danger" onClick={()=>handleDelete('tournaments',t.id,t.name)}>Remove</button>
                           </div>
                         </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* ── EMPLOYEES ── */}
+          {activeTab==='employees' && (
+            <div>
+              <div className="section-header">
+                <h1 className="section-title">Employees</h1>
+              </div>
+              <div style={{background:'var(--card-bg)',border:'1px solid var(--border)',borderRadius:12,padding:20,marginBottom:20}}>
+                <div style={{fontSize:14,fontWeight:700,textTransform:'uppercase',marginBottom:14}}>Add new employee</div>
+                <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+                  <input className="form-input" type="text" placeholder="Full name" value={newEmployee.name} onChange={e=>setNewEmployee({...newEmployee,name:e.target.value})} title="Employee name" aria-label="Employee name" style={{flex:1,minWidth:140}} />
+                  <input className="form-input" type="email" placeholder="email@example.com" value={newEmployee.email} onChange={e=>setNewEmployee({...newEmployee,email:e.target.value})} title="Employee email" aria-label="Employee email" style={{flex:1,minWidth:180}} />
+                  <select className="form-select" value={newEmployee.role} onChange={e=>setNewEmployee({...newEmployee,role:e.target.value})} title="Role" aria-label="Role" style={{width:140}}>
+                    {['staff','supervisor','cashier','coach'].map(r=><option key={r} value={r}>{r}</option>)}
+                  </select>
+                  <button className="btn add" onClick={handleAddEmployee}>Add employee</button>
+                </div>
+                {empMsg.text&&<div style={{marginTop:10,fontFamily:"'Barlow',sans-serif",fontSize:13,color:empMsg.type==='error'?'var(--error-text)':'var(--success-text)'}}>{empMsg.text}</div>}
+              </div>
+              <div className="table-wrap">
+                <table className="tbl">
+                  <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Added on</th><th>Actions</th></tr></thead>
+                  <tbody>
+                    {employees.length===0?<tr><td colSpan={5}><div className="empty">No employees yet — add one!</div></td></tr>:
+                    employees.map(emp=>(
+                      <tr key={emp.id}>
+                        <td style={{fontWeight:600}}>{emp.name}</td>
+                        <td>{emp.email}</td>
+                        <td style={{textTransform:'capitalize'}}>{emp.role}</td>
+                        <td>{new Date(emp.created_at).toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})}</td>
+                        <td><button className="btn danger" onClick={()=>handleRemoveEmployee(emp.id)}>Remove</button></td>
                       </tr>
                     ))}
                   </tbody>
