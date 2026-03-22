@@ -32,9 +32,9 @@ export default function PlayerDashboard() {
       const { data: empData } = await supabase.from('employees').select('email').eq('email', user.email).single();
       if (empData) setIsEmployee(true);
       const [{ data:bookingsData },{ data:sessionsData },{ data:tournamentsData }] = await Promise.all([
-        supabase.from('bookings').select('*, courts(name,type)').eq('user_id',user.id).order('start_time',{ascending:false}).limit(10),
-        supabase.from('coaching_sessions').select('*, coaches(name,skill_level)').eq('user_id',user.id).order('session_time',{ascending:false}).limit(5),
-        supabase.from('tournament_registrations').select('*, tournaments(name,date,status)').eq('user_id',user.id).limit(5),
+        supabase.from('bookings').select('*, courts(name,type)').eq('user_id',user.id).eq('status','confirmed').order('start_time',{ascending:false}).limit(10),
+        supabase.from('coaching_sessions').select('*, coaches(name,skill_level)').eq('user_id',user.id).eq('status','confirmed').order('session_time',{ascending:false}).limit(5),
+        supabase.from('tournament_registrations').select('*, tournaments(name,date,status)').eq('user_id',user.id).eq('status','confirmed').limit(5),
       ]);
       setBookings(bookingsData||[]); setSessions(sessionsData||[]); setTournaments(tournamentsData||[]);
       setLoading(false);
@@ -211,7 +211,7 @@ export default function PlayerDashboard() {
           {activeTab==='overview' && (
             <div>
               <div style={{ display:'grid', gridTemplateColumns:'repeat(2,minmax(0,1fr))', gap:12, marginBottom:32 }}>
-                {[{label:'Total bookings',value:bookings.length},{label:'Upcoming',value:upcomingBookings},{label:'Confirmed',value:confirmedBookings},{label:'Total spent',value:`₱${totalSpent.toLocaleString()}`}].map((stat,i) => (
+                {[{label:'Total bookings',value:bookings.filter(b=>b.status==='confirmed').length},{label:'Upcoming',value:bookings.filter(b=>b.status==='confirmed'&&new Date(b.start_time)>new Date()).length},{label:'Confirmed',value:bookings.filter(b=>b.status==='confirmed').length},{label:'Total spent',value:`₱${totalSpent.toLocaleString()}`}].map((stat,i) => (
                   <div key={i} className="stat-card" style={{ animationDelay:`${i*0.08}s` }}>
                     <div style={{ fontSize:11, fontFamily:"'Barlow',sans-serif", color:'var(--text-muted)', letterSpacing:'0.06em', textTransform:'uppercase', marginBottom:8 }}>{stat.label}</div>
                     <div style={{ fontSize:32, fontWeight:800, lineHeight:1 }}>{stat.value}</div>

@@ -94,6 +94,7 @@ export default function EmployeeDashboard() {
       supabase.from('bookings').select('*, courts(name,type)')
         .gte('start_time', `${today}T00:00:00`)
         .lte('start_time', `${today}T23:59:59`)
+        .in('status', ['confirmed', 'checked-in', 'pending'])
         .order('start_time'),
       // Today's food orders
       supabase.from('food_orders').select('*')
@@ -311,10 +312,10 @@ export default function EmployeeDashboard() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 12, marginBottom: 24 }}>
                 {[
                   { label: "Today's revenue", val: `₱${todayRevenue.toLocaleString()}`, sub: 'Confirmed only' },
-                  { label: "Bookings", val: bookings.length, sub: `${bookings.filter(b => b.status === 'confirmed').length} confirmed` },
-                  { label: "Food orders", val: foodOrders.length, sub: `${foodOrders.filter(f => f.status === 'pending').length} pending` },
-                  { label: "Shop orders", val: shopOrders.length, sub: `${shopOrders.filter(s => s.status === 'pending').length} pending` },
-                  { label: "Sessions", val: sessions.length, sub: `${sessions.filter(s => s.status === 'pending').length} pending` },
+                  { label: "Bookings", val: bookings.filter(b => b.status === 'confirmed').length, sub: 'confirmed today' },
+                  { label: "Food orders", val: foodOrders.filter(f => ['confirmed','delivered','ready','preparing'].includes(f.status)).length, sub: `${foodOrders.filter(f => f.status === 'pending').length} pending` },
+                  { label: "Shop orders", val: shopOrders.filter(o => ['confirmed','completed','ready','preparing'].includes(o.status)).length, sub: `${shopOrders.filter(s => s.status === 'pending').length} pending` },
+                  { label: "Sessions", val: sessions.filter(s => ['confirmed','completed'].includes(s.status)).length, sub: `${sessions.filter(s => s.status === 'pending').length} pending` },
                   { label: "Courts open", val: courts.filter(c => c.is_available).length, sub: `of ${courts.length} total` },
                 ].map((s, i) => (
                   <div key={i} className="stat-card" style={{ animationDelay: `${i * 0.06}s` }}>

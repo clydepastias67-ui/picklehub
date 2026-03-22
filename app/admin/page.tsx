@@ -84,7 +84,7 @@ export default function AdminDashboard() {
     const [
       {data:b},{data:c},{data:co},{data:m},{data:p},{data:t},{data:a}
     ] = await Promise.all([
-      supabase.from('bookings').select('*,courts(name)').order('start_time',{ascending:false}),
+      supabase.from('bookings').select('*,courts(name)').in('status',['confirmed','pending','checked-in']).order('start_time',{ascending:false}),
       supabase.from('courts').select('*').order('name'),
       supabase.from('coaches').select('*').order('name'),
       supabase.from('menu_items').select('*').order('category'),
@@ -394,11 +394,11 @@ export default function AdminDashboard() {
               <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(155px,1fr))',gap:12,marginBottom:24}}>
                 {[
                   {label:'Total revenue',val:`₱${totalRevenue.toLocaleString()}`,sub:'Confirmed only'},
-                  {label:'Total bookings',val:bookings.length,sub:`${bookings.filter(b=>b.status==='confirmed').length} confirmed`},
+                  {label:'Total bookings',val:bookings.filter(b=>b.status==='confirmed').length,sub:'confirmed bookings'},
                   {label:'Pending',val:bookings.filter(b=>b.status==='pending').length,sub:'Awaiting action'},
                   {label:'Courts',val:courts.length,sub:`${courts.filter(c=>c.is_available).length} available`},
-                  {label:'Coaches',val:coaches.length,sub:`${coaches.filter(c=>c.is_available).length} active`},
-                  {label:'Tournaments',val:tournaments.length,sub:`${tournaments.filter(t=>t.status==='open').length} open`},
+                  {label:'Coaches',val:coaches.filter(c=>c.is_available).length,sub:'available now'},
+                  {label:'Tournaments',val:tournaments.filter(t=>t.status==='open').length,sub:'open for registration'},
                 ].map((s,i)=>(
                   <div key={i} className="stat-card" style={{animationDelay:`${i*0.07}s`}}>
                     <div className="stat-label">{s.label}</div>
@@ -409,13 +409,13 @@ export default function AdminDashboard() {
               </div>
               <div className="table-wrap">
                 <div style={{padding:'14px 18px',borderBottom:'1px solid var(--border)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                  <div style={{fontSize:15,fontWeight:700,textTransform:'uppercase'}}>Recent bookings</div>
+                  <div style={{fontSize:15,fontWeight:700,textTransform:'uppercase'}}>Recent confirmed bookings</div>
                   <button className="btn" onClick={()=>setActiveTab('bookings')}>View all</button>
                 </div>
                 <table className="tbl">
                   <thead><tr><th>Court</th><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
                   <tbody>
-                    {bookings.slice(0,8).map(b=>(
+                    {bookings.filter(b=>b.status==='confirmed').slice(0,8).map(b=>(
                       <tr key={b.id}>
                         <td style={{fontWeight:600}}>{b.courts?.name||'—'}</td>
                         <td>{fmtDate(b.start_time)} {fmtTime(b.start_time)}</td>
