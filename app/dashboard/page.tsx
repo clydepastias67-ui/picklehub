@@ -73,7 +73,7 @@ export default function PlayerDashboard() {
 
         .sidebar{width:220px;background:var(--sidebar-bg);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:50;transition:transform .3s;}
         .main{margin-left:220px;flex:1;min-height:100vh;}
-        @media(max-width:768px){.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.main{margin-left:0}}
+        @media(max-width:768px){.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.main{margin-left:0 !important;width:100%;overflow-x:hidden;}}
 
         .nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:500;color:var(--text-muted);cursor:pointer;transition:all .2s;text-decoration:none;margin:1px 8px;}
         .nav-item:hover{background:var(--bg-hover);color:var(--text-secondary);}
@@ -172,8 +172,8 @@ export default function PlayerDashboard() {
 
       {/* MAIN */}
       <div className="main">
-        <div style={{ padding:'clamp(16px,4vw,32px) clamp(12px,3vw,32px) 64px' }}>
-          <div style={{ marginBottom:32, animation:'fadeUp .5s ease both' }}>
+        <div style={{ padding:'clamp(16px,4vw,32px) clamp(12px,3vw,32px) 64px', maxWidth:'100%', overflowX:'hidden' }}>
+          <div style={{ marginBottom:24, animation:'fadeUp .5s ease both', width:'100%' }}>
             <div style={{ fontSize:11, fontFamily:"'Barlow',sans-serif", color:'var(--accent)', letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:6 }}>
               {new Date().toLocaleDateString('en-PH',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}
             </div>
@@ -185,7 +185,7 @@ export default function PlayerDashboard() {
           {/* OVERVIEW */}
           {activeTab==='overview' && (
             <div>
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:12, marginBottom:32 }}>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(2,minmax(0,1fr))', gap:12, marginBottom:32 }}>
                 {[{label:'Total bookings',value:bookings.length},{label:'Upcoming',value:upcomingBookings},{label:'Confirmed',value:confirmedBookings},{label:'Total spent',value:`₱${totalSpent.toLocaleString()}`}].map((stat,i) => (
                   <div key={i} className="stat-card" style={{ animationDelay:`${i*0.08}s` }}>
                     <div style={{ fontSize:11, fontFamily:"'Barlow',sans-serif", color:'var(--text-muted)', letterSpacing:'0.06em', textTransform:'uppercase', marginBottom:8 }}>{stat.label}</div>
@@ -317,7 +317,7 @@ export default function PlayerDashboard() {
           {activeTab==='quicklinks' && (
             <div style={{ animation:'fadeUp .4s ease both' }}>
               <div className="section-title">Quick links</div>
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:12 }}>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(2,minmax(0,1fr))', gap:12 }}>
                 {[
                   {label:'Book a court',href:'/courts',icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="16" height="16" rx="2" stroke="var(--accent)" strokeWidth="1.5"/><path d="M10 6v8M6 10h8" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round"/></svg>},
                   {label:'Order food',href:'/food',icon:<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 6h14M3 10h14M3 14h8" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round"/></svg>},
