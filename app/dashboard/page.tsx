@@ -18,6 +18,7 @@ export default function PlayerDashboard() {
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isEmployee, setIsEmployee] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -27,6 +28,9 @@ export default function PlayerDashboard() {
       setUser({ id:user.id, email:user.email, full_name:user.user_metadata?.full_name });
       const { data: adminData } = await supabase.from('admins').select('email').eq('email', user.email).single();
       if (adminData) setIsAdmin(true);
+
+      const { data: empData } = await supabase.from('employees').select('email').eq('email', user.email).single();
+      if (empData) setIsEmployee(true);
       const [{ data:bookingsData },{ data:sessionsData },{ data:tournamentsData }] = await Promise.all([
         supabase.from('bookings').select('*, courts(name,type)').eq('user_id',user.id).order('start_time',{ascending:false}).limit(10),
         supabase.from('coaching_sessions').select('*, coaches(name,skill_level)').eq('user_id',user.id).order('session_time',{ascending:false}).limit(5),
@@ -162,6 +166,11 @@ export default function PlayerDashboard() {
           {isAdmin && (
             <a href="/admin" style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 12px', borderRadius:8, background:'var(--accent-bg)', border:'1px solid var(--accent-border)', color:'var(--accent)', textDecoration:'none', fontFamily:"'Barlow Condensed',sans-serif", fontSize:13, fontWeight:700, letterSpacing:'0.04em', textTransform:'uppercase', transition:'all .2s' }}>
               <span style={{fontSize:14}}>🔐</span> Admin panel
+            </a>
+          )}
+          {isEmployee && (
+            <a href="/employee" style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 12px', borderRadius:8, background:'var(--accent-bg)', border:'1px solid var(--accent-border)', color:'var(--accent)', textDecoration:'none', fontFamily:"'Barlow Condensed',sans-serif", fontSize:13, fontWeight:700, letterSpacing:'0.04em', textTransform:'uppercase', transition:'all .2s' }}>
+              <span style={{fontSize:14}}>👷</span> Staff panel
             </a>
           )}
           <ThemeToggle />

@@ -264,6 +264,9 @@ export default function EmployeeDashboard() {
         </nav>
         <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
           <ThemeToggle />
+          <a href="/dashboard" style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'7px 8px', borderRadius:8, border:'1px solid var(--border)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:11, fontWeight:700, color:'var(--text-muted)', textDecoration:'none', textTransform:'uppercase', letterSpacing:'0.04em' }}>
+            👤 Player dashboard
+          </a>
           <button className="signout-btn" onClick={handleSignOut}>Sign out</button>
         </div>
       </div>
