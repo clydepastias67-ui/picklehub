@@ -116,41 +116,57 @@ export default function LandingPage() {
       `}</style>
 
       {/* NAV */}
-      <nav style={{ position:'sticky', top:0, zIndex:100, background:scrolled ? 'var(--nav-bg)' : 'transparent', backdropFilter:scrolled ? 'blur(12px)' : 'none', borderBottom:scrolled ? '1px solid var(--border)' : '1px solid transparent', transition:'all .3s', padding:'0 48px', height:'64px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+      <nav style={{ position:'sticky', top:0, zIndex:100, background:scrolled ? 'var(--nav-bg)' : 'transparent', backdropFilter:scrolled ? 'blur(12px)' : 'none', borderBottom:scrolled ? '1px solid var(--border)' : '1px solid transparent', transition:'all .3s', padding:'0 clamp(16px,4vw,48px)', height:'64px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
           <div style={{ width:10, height:10, background:'var(--accent)', borderRadius:'50%', animation:'pulse-dot 2s ease infinite' }} />
           <span style={{ fontSize:20, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em' }}>PickleHub</span>
         </div>
-
-        <div style={{ display:'flex', gap:12, alignItems:'center' }}>
+        {/* Logo only on left, theme + hamburger on right */}
+        <div style={{ display:'flex', gap:10, alignItems:'center' }}>
           <ThemeToggle />
-          {user ? (
-            <>
-              <div className="user-badge">
-                <div className="user-avatar">{(user.full_name || user.email || 'U')[0].toUpperCase()}</div>
-                <span>{user.full_name || user.email}</span>
-              </div>
-              <a href="/dashboard" className="btn-primary" style={{ padding:'8px 16px', fontSize:13 }}>Dashboard</a>
-              <button className="signout-btn" onClick={handleSignOut}>Sign out</button>
-            </>
-          ) : (
-            <>
-              <a href="/login" className="nav-link">Sign in</a>
-              <a href="/login" className="btn-primary" style={{ padding:'10px 20px', fontSize:13 }}>Book now</a>
-            </>
-          )}
-          <button onClick={() => setMenuOpen(!menuOpen)} style={{ background:'none', border:'none', color:'var(--text-primary)', cursor:'pointer', display:'flex', flexDirection:'column', gap:5, padding:4 }} aria-label="Menu">
+          <button onClick={() => setMenuOpen(!menuOpen)} style={{ background:'none', border:'none', color:'var(--text-primary)', cursor:'pointer', display:'flex', flexDirection:'column', gap:5, padding:4 }} aria-label="Menu" title="Menu">
             {[0,1,2].map(i => (
-              <span key={i} style={{ display:'block', width:22, height:1.5, background:menuOpen && i===1 ? 'transparent' : 'var(--text-primary)', transition:'all .2s', transform:menuOpen ? (i===0 ? 'rotate(45deg) translateY(6.5px)' : i===2 ? 'rotate(-45deg) translateY(-6.5px)' : '') : '' }} />
+              <span key={i} style={{ display:'block', width:22, height:2, background:'var(--text-primary)', borderRadius:2, transition:'all .2s', transform:menuOpen ? (i===0 ? 'rotate(45deg) translateY(7px)' : i===2 ? 'rotate(-45deg) translateY(-7px)' : '') : '', opacity:menuOpen && i===1 ? 0 : 1 }} />
             ))}
           </button>
         </div>
+        {/* Dropdown menu */}
         {menuOpen && (
           <div className="mobile-menu">
-            {['Courts','Coaching','Tournaments','Shop','Food & drinks'].map(item => (
-              <a key={item} href={`/${item.toLowerCase().replace(' & ','-')}`} className="nav-link" style={{ fontSize:16 }} onClick={() => setMenuOpen(false)}>{item}</a>
+            {/* User info if logged in */}
+            {user && (
+              <div style={{ display:'flex', alignItems:'center', gap:10, paddingBottom:14, borderBottom:'1px solid var(--border)', marginBottom:4 }}>
+                <div style={{ width:38, height:38, background:'var(--accent)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, fontWeight:800, color:'#fff', flexShrink:0 }}>
+                  {(user.full_name || user.email || 'U')[0].toUpperCase()}
+                </div>
+                <div>
+                  <div style={{ fontSize:14, fontWeight:700 }}>{user.full_name || 'Player'}</div>
+                  <div style={{ fontFamily:"'Barlow',sans-serif", fontSize:12, color:'var(--text-muted)' }}>{user.email}</div>
+                </div>
+              </div>
+            )}
+            {/* Page links */}
+            {[
+              { label:'Courts', href:'/courts' },
+              { label:'Coaching', href:'/coaching' },
+              { label:'Tournaments', href:'/tournaments' },
+              { label:'Shop', href:'/shop' },
+              { label:'Food & drinks', href:'/food' },
+            ].map(item => (
+              <a key={item.href} href={item.href} style={{ fontFamily:"'Barlow',sans-serif", fontSize:15, color:'var(--text-secondary)', textDecoration:'none', padding:'10px 0', borderBottom:'1px solid var(--border)', display:'block' }} onClick={() => setMenuOpen(false)}>{item.label}</a>
             ))}
-            {user ? <button className="signout-btn" onClick={handleSignOut}>Sign out</button> : <a href="/login" className="nav-link" style={{ fontSize:16 }}>Sign in</a>}
+            {/* Dashboard or Sign in */}
+            {user ? (
+              <>
+                <a href="/dashboard" style={{ fontFamily:"'Barlow',sans-serif", fontSize:15, color:'var(--accent)', textDecoration:'none', padding:'10px 0', borderBottom:'1px solid var(--border)', display:'block', fontWeight:700 }} onClick={() => setMenuOpen(false)}>📊 Dashboard</a>
+                <button onClick={() => { handleSignOut(); setMenuOpen(false); }} style={{ background:'none', border:'none', fontFamily:"'Barlow',sans-serif", fontSize:15, color:'var(--error-text)', cursor:'pointer', textAlign:'left', padding:'10px 0', width:'100%' }}>Sign out</button>
+              </>
+            ) : (
+              <>
+                <a href="/login" style={{ fontFamily:"'Barlow',sans-serif", fontSize:15, color:'var(--accent)', textDecoration:'none', padding:'10px 0', borderBottom:'1px solid var(--border)', display:'block', fontWeight:700 }} onClick={() => setMenuOpen(false)}>Sign in</a>
+                <a href="/login" style={{ fontFamily:"'Barlow',sans-serif", fontSize:15, color:'var(--text-secondary)', textDecoration:'none', padding:'10px 0', display:'block' }} onClick={() => setMenuOpen(false)}>Register</a>
+              </>
+            )}
           </div>
         )}
       </nav>

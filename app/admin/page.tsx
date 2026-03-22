@@ -197,8 +197,13 @@ export default function AdminDashboard() {
         @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 
         .sidebar{width:230px;background:var(--sidebar-bg);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:50;transition:transform .3s;overflow-y:auto;}
-        .main{margin-left:230px;flex:1;min-height:100vh;}
-        @media(max-width:900px){.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.main{margin-left:0}}
+        .main{margin-left:230px;flex:1;min-height:100vh;min-width:0;}
+        @media(max-width:900px){
+          .sidebar{transform:translateX(-100%);}
+          .sidebar.open{transform:translateX(0);}
+          .main{margin-left:0 !important;width:100% !important;max-width:100vw !important;overflow-x:hidden !important;}
+          .mobile-bar{display:flex !important;}
+        }
 
         .nav-item{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:700;color:var(--text-muted);cursor:pointer;transition:all .2s;margin:1px 8px;text-transform:uppercase;letter-spacing:.04em;}
         .nav-item:hover{background:var(--bg-hover);color:var(--text-secondary);}
@@ -260,8 +265,7 @@ export default function AdminDashboard() {
         .sort-btn{font-size:11px;padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:.04em;text-transform:uppercase;transition:all .2s;}
         .sort-btn.active{background:var(--accent-bg);color:var(--accent);border-color:var(--accent);}
 
-        .mobile-bar{display:none;background:var(--nav-bg);border-bottom:1px solid var(--border);padding:0 20px;height:52px;align-items:center;justify-content:space-between;}
-        @media(max-width:900px){.mobile-bar{display:flex;}}
+        .mobile-bar{display:none;background:var(--nav-bg);border-bottom:1px solid var(--border);padding:0 20px;height:52px;align-items:center;justify-content:space-between;width:100%;}
 
         .signout-btn{width:100%;background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:8px;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:all .2s;}
         .signout-btn:hover{border-color:var(--error-text);color:var(--error-text);}
