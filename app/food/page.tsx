@@ -12,6 +12,7 @@ type MenuItem = {
   category: 'snacks' | 'drinks' | 'meals';
   price: number;
   is_available: boolean;
+  image_url?: string;
 };
 
 type CartItem = {
