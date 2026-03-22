@@ -57,6 +57,13 @@ export default function EmployeeDashboard() {
       if (!user) { window.location.href = '/login'; return; }
       setUserEmail(user.email || '');
 
+      // Check if user is an admin first — admins can access staff panel too
+      const { data: adminData } = await supabase
+        .from('admins')
+        .select('email')
+        .eq('email', user.email)
+        .single();
+
       // Check if user is an employee
       const { data: empData } = await supabase
         .from('employees')
@@ -64,9 +71,10 @@ export default function EmployeeDashboard() {
         .eq('email', user.email)
         .single();
 
-      if (!empData) { window.location.href = '/dashboard'; return; }
+      // Allow access if admin OR employee — redirect otherwise
+      if (!empData && !adminData) { window.location.href = '/dashboard'; return; }
       setIsEmployee(true);
-      setEmployeeName(empData.name || user.email || 'Employee');
+      setEmployeeName(empData?.name || user.email || (adminData ? 'Admin' : 'Employee'));
 
       await fetchAll();
       setLoading(false);
