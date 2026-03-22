@@ -73,7 +73,11 @@ export default function PlayerDashboard() {
 
         .sidebar{width:220px;background:var(--sidebar-bg);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:50;transition:transform .3s;}
         .main{margin-left:220px;flex:1;min-height:100vh;}
-        @media(max-width:768px){.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.main{margin-left:0 !important;width:100%;overflow-x:hidden;}}
+        @media(max-width:768px){
+          .sidebar{transform:translateX(-100%) !important;}
+          .sidebar.open{transform:translateX(0) !important;}
+          .main{margin-left:0 !important;width:100vw !important;max-width:100vw !important;overflow-x:hidden !important;}
+        }
 
         .nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:500;color:var(--text-muted);cursor:pointer;transition:all .2s;text-decoration:none;margin:1px 8px;}
         .nav-item:hover{background:var(--bg-hover);color:var(--text-secondary);}
@@ -82,7 +86,7 @@ export default function PlayerDashboard() {
         .stat-card{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:20px;animation:fadeUp .5s ease both;transition:border-color .2s;}
         .stat-card:hover{border-color:var(--border-hover);}
 
-        .booking-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);animation:fadeIn .4s ease both;}
+        .booking-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);animation:fadeIn .4s ease both;gap:8px;flex-wrap:wrap;}
         .booking-row:last-child{border-bottom:none;}
 
         .status-badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;}
@@ -102,13 +106,15 @@ export default function PlayerDashboard() {
         .empty-state{text-align:center;padding:40px 20px;font-family:'Barlow',sans-serif;font-size:14px;color:var(--text-muted);}
         .empty-state a{color:var(--accent);text-decoration:none;font-weight:500;}
 
-        .mobile-topbar{display:none;background:var(--nav-bg);border-bottom:1px solid var(--border);padding:0 20px;height:56px;align-items:center;justify-content:space-between;}
-        @media(max-width:768px){.mobile-topbar{display:flex;}}
+        .mobile-topbar{display:none;background:var(--nav-bg);border-bottom:1px solid var(--border);padding:0 16px;height:56px;align-items:center;justify-content:space-between;width:100%;}
+        @media(max-width:768px){
+          .mobile-topbar{display:flex;}
+        }
 
         .signout-btn{width:100%;background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:8px;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px;}
         .signout-btn:hover{border-color:var(--accent);color:var(--text-primary);}
 
-        .section-card{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px;animation:fadeUp .5s ease both;}
+        .section-card{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px;animation:fadeUp .5s ease both;width:100%;overflow:hidden;}
         .add-btn{background:var(--accent);color:#fff;padding:8px 16px;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;transition:background .2s;}
         .add-btn:hover{background:var(--accent-hover);}
       `}</style>
