@@ -254,3 +254,110 @@ table {
 [style*="animation"] {
   transition: none !important;
 }
+
+/* ── CRITICAL MOBILE OVERRIDES ── */
+/* These fix the zoom-out issue on all pages */
+
+@media (max-width: 768px) {
+
+  /* Fix all large paddings */
+  section, nav, footer, .main > div {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  /* Fix hero section */
+  section {
+    padding-top: 40px !important;
+    padding-bottom: 40px !important;
+  }
+
+  /* Fix all fixed-width containers */
+  [style*="max-width: 1200px"],
+  [style*="max-width:1200px"],
+  [style*="maxWidth: 1200"],
+  [style*="maxWidth:1200"] {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  /* Fix sidebar layouts — stack vertically */
+  [style*="grid-template-columns: 1fr 340px"],
+  [style*="grid-template-columns: 1fr 320px"],
+  [style*="grid-template-columns: 1fr 260px"],
+  [style*="gridTemplateColumns: '1fr 340px'"],
+  [style*="gridTemplateColumns: '1fr 320px'"],
+  [style*="gridTemplateColumns: '1fr 260px'"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Fix booking sidebar sticky position on mobile */
+  [style*="position: 'sticky'"],
+  [style*="position:'sticky'"] {
+    position: relative !important;
+    top: auto !important;
+  }
+
+  /* Fix large fonts */
+  h1 { font-size: clamp(32px, 8vw, 64px) !important; }
+
+  /* Fix nav padding */
+  nav {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  /* Fix CTA section */
+  .cta-section {
+    margin: 0 8px 40px !important;
+    padding: 32px 16px !important;
+  }
+
+  /* Fix footer */
+  footer {
+    flex-direction: column !important;
+    text-align: center !important;
+    padding: 24px 16px !important;
+  }
+
+  /* Fix grid columns on mobile */
+  [style*="repeat(3, 1fr)"],
+  [style*="repeat(3,1fr)"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  [style*="repeat(auto-fit, minmax(220px"] {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
+  }
+
+  /* Fix table overflow */
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Fix auth page */
+  .auth-wrap {
+    grid-template-columns: 1fr !important;
+  }
+  .auth-left {
+    display: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Extra small screens */
+  body {
+    font-size: 14px;
+  }
+
+  [style*="repeat(auto-fill, minmax(200px"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  [style*="repeat(auto-fit, minmax(160px"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
