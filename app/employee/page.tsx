@@ -99,10 +99,12 @@ export default function EmployeeDashboard() {
       // Today's food orders
       supabase.from('food_orders').select('*')
         .gte('created_at', `${today}T00:00:00`)
+        .not('status', 'eq', 'cancelled')
         .order('created_at', { ascending: false }),
       // Today's shop orders
       supabase.from('shop_orders').select('*, products(name)')
         .gte('created_at', `${today}T00:00:00`)
+        .not('status', 'eq', 'cancelled')
         .order('created_at', { ascending: false }),
       // Today's coaching sessions
       supabase.from('coaching_sessions').select('*, coaches(name)')
@@ -419,9 +421,12 @@ export default function EmployeeDashboard() {
                           <td style={{ color: 'var(--accent)', fontWeight: 700 }}>₱{f.total_price?.toLocaleString()}</td>
                           <td>
                             <div className="actions">
-                              {f.status === 'pending' && <button className="btn primary" onClick={() => updateFoodStatus(f.id, 'preparing')}>Prepare</button>}
-                              {f.status === 'preparing' && <button className="btn primary" onClick={() => updateFoodStatus(f.id, 'ready')}>Ready</button>}
-                              {f.status === 'ready' && <button className="btn success" onClick={() => updateFoodStatus(f.id, 'delivered')}>Delivered</button>}
+                              {(f.status === 'pending' || f.status === 'confirmed') && <button className="btn primary" onClick={() => updateFoodStatus(f.id, 'preparing')}>Prepare</button>}
+                              {f.status === 'preparing' && <button className="btn primary" onClick={() => updateFoodStatus(f.id, 'ready')}>
+                                {f.delivery_type === 'court' ? 'Ready to deliver' : 'Ready for pickup'}
+                              </button>}
+                              {f.status === 'ready' && f.delivery_type === 'court' && <button className="btn success" onClick={() => updateFoodStatus(f.id, 'delivered')}>✓ Delivered</button>}
+                              {f.status === 'ready' && f.delivery_type !== 'court' && <button className="btn success" onClick={() => updateFoodStatus(f.id, 'delivered')}>✓ Picked up</button>}
                             </div>
                           </td>
                         </tr>
@@ -453,9 +458,11 @@ export default function EmployeeDashboard() {
                           <td style={{ color: 'var(--accent)', fontWeight: 700 }}>₱{o.total_price?.toLocaleString()}</td>
                           <td>
                             <div className="actions">
-                              {o.status === 'pending' && <button className="btn primary" onClick={() => updateShopStatus(o.id, 'preparing')}>Prepare</button>}
-                              {o.status === 'preparing' && <button className="btn primary" onClick={() => updateShopStatus(o.id, 'ready')}>Ready</button>}
-                              {o.status === 'ready' && <button className="btn success" onClick={() => updateShopStatus(o.id, 'completed')}>Complete</button>}
+                              {(o.status === 'pending' || o.status === 'confirmed') && <button className="btn primary" onClick={() => updateShopStatus(o.id, 'preparing')}>Prepare</button>}
+                              {o.status === 'preparing' && <button className="btn primary" onClick={() => updateShopStatus(o.id, 'ready')}>
+                                {o.type === 'rental' ? 'Ready to rent' : 'Ready for pickup'}
+                              </button>}
+                              {o.status === 'ready' && <button className="btn success" onClick={() => updateShopStatus(o.id, 'completed')}>✓ {o.type === 'rental' ? 'Rented out' : 'Picked up'}</button>}
                             </div>
                           </td>
                         </tr>
