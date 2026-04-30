@@ -27,7 +27,13 @@ type CartItem = {
 
 export default function ShopPage() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    // Restore cart from localStorage on mount (only store id/qty/type to keep it lean)
+    try {
+      const saved = localStorage.getItem('picklehub_shop_cart');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const [activeCategory, setActiveCategory] = useState<'all' | 'rackets' | 'balls' | 'apparel' | 'accessories'>('all');
   const [activeType, setActiveType] = useState<'all' | 'buy' | 'rent'>('all');
   const [loading, setLoading] = useState(true);
@@ -35,6 +41,11 @@ export default function ShopPage() {
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [error, setError] = useState('');
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
+
+  // Persist cart to localStorage whenever it changes
+  useEffect(() => {
+    try { localStorage.setItem('picklehub_shop_cart', JSON.stringify(cart)); } catch {}
+  }, [cart]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -103,6 +114,7 @@ export default function ShopPage() {
       // We create one combined payment for the whole cart
       const firstOrderId = orderData[0]?.id;
       const itemNames = cart.map(c => `${c.product.name} (${c.type})`).join(', ');
+      try { localStorage.removeItem('picklehub_shop_cart'); } catch {}
       await redirectToPayment({
         amount: cartTotal,
         description: `PickleHub Shop — ${itemNames}`,

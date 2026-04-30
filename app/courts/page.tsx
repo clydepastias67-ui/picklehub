@@ -274,15 +274,20 @@ export default function CourtsPage() {
                   <div style={{display:'flex',alignItems:'center',gap:8}}>
                     <span style={{fontFamily:"'Barlow',sans-serif",fontSize:12,color:'var(--text-muted)'}}>Duration:</span>
                     {[1,2,3].map(d=>(
-                      <button key={d} onClick={()=>setSelectedDuration(d)} style={{width:32,height:32,borderRadius:6,border:`1px solid ${selectedDuration===d?'var(--accent)':'var(--border)'}`,background:selectedDuration===d?'var(--accent)':'transparent',color:selectedDuration===d?'#fff':'var(--text-muted)',fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,fontWeight:700,cursor:'pointer',transition:'all .2s'}}>{d}h</button>
+                      <button key={d} onClick={()=>{ setSelectedDuration(d); setSelectedSlot(null); }} style={{width:32,height:32,borderRadius:6,border:`1px solid ${selectedDuration===d?'var(--accent)':'var(--border)'}`,background:selectedDuration===d?'var(--accent)':'transparent',color:selectedDuration===d?'#fff':'var(--text-muted)',fontFamily:"'Barlow Condensed',sans-serif",fontSize:13,fontWeight:700,cursor:'pointer',transition:'all .2s'}}>{d}h</button>
                     ))}
                   </div>
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(80px,1fr))',gap:8}}>
                   {TIME_SLOTS.map(slot=>{
-                    const isBooked = bookedSlots.includes(slot.hour);
+                    // Block a slot if ANY hour it would occupy (for the selected duration) is already booked
+                    const hoursNeeded = Array.from({length: selectedDuration}, (_,i) => slot.hour + i);
+                    const isBooked = hoursNeeded.some(h => bookedSlots.includes(h));
+                    // Block slots where booking would run past closing (8 PM = hour 20)
+                    const runsOverClose = slot.hour + selectedDuration > 20;
+                    const isUnavailable = isBooked || runsOverClose;
                     const isSelected = selectedSlot?.hour===slot.hour;
-                    return <div key={slot.hour} className={`time-slot ${isBooked?'booked':''} ${isSelected?'selected':''}`} onClick={()=>!isBooked&&setSelectedSlot(slot)}>{slot.time}</div>;
+                    return <div key={slot.hour} className={`time-slot ${isUnavailable?'booked':''} ${isSelected&&!isUnavailable?'selected':''}`} onClick={()=>{ if(!isUnavailable) setSelectedSlot(slot); else if(isSelected) setSelectedSlot(null); }}>{slot.time}</div>;
                   })}
                 </div>
                 <div style={{display:'flex',gap:16,marginTop:12}}>

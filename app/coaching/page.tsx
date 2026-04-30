@@ -27,6 +27,8 @@ export default function CoachingPage() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
+  // Maps coach_id -> array of booked time strings ("HH:MM") for the selected date
+  const [bookedCoachSlots, setBookedCoachSlots] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -40,6 +42,32 @@ export default function CoachingPage() {
     };
     fetchData();
   }, []);
+
+  // Re-fetch booked slots whenever the selected date changes
+  useEffect(() => {
+    if (!sessionDate || coaches.length === 0) return;
+    const fetchBookedSlots = async () => {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from('coaching_sessions')
+        .select('coach_id, session_time')
+        .gte('session_time', `${sessionDate}T00:00:00`)
+        .lte('session_time', `${sessionDate}T23:59:59`)
+        .neq('status', 'cancelled');
+      const slotMap: Record<string, string[]> = {};
+      data?.forEach(s => {
+        const time = new Date(s.session_time).toTimeString().slice(0, 5); // "HH:MM"
+        if (!slotMap[s.coach_id]) slotMap[s.coach_id] = [];
+        slotMap[s.coach_id].push(time);
+      });
+      setBookedCoachSlots(slotMap);
+      // Clear selected time if it's now taken for the selected coach
+      if (selectedCoach && sessionTime && slotMap[selectedCoach.id]?.includes(sessionTime)) {
+        setSessionTime('');
+      }
+    };
+    fetchBookedSlots();
+  }, [sessionDate, coaches]);
 
   const handleBook = async () => {
     if (!selectedCoach || !sessionDate || !sessionTime || !user) return;
@@ -130,8 +158,9 @@ export default function CoachingPage() {
         .book-btn:disabled{background:var(--bg-hover);color:var(--text-muted);cursor:not-allowed;}
 
         .time-btn{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card-bg);color:var(--text-muted);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;}
-        .time-btn:hover{border-color:var(--accent);color:var(--text-primary);}
+        .time-btn:hover:not(:disabled){border-color:var(--accent);color:var(--text-primary);}
         .time-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+        .time-btn:disabled{background:var(--bg-primary);color:var(--text-hint);cursor:not-allowed;text-decoration:line-through;opacity:.6;}
 
         @media(max-width:768px){.main-grid{grid-template-columns:1fr !important;}}
       `}</style>
@@ -246,8 +275,9 @@ export default function CoachingPage() {
                         const val = t.includes('PM') && !t.startsWith('12')
                           ? `${parseInt(t) + 12}:00`
                           : t.replace(' AM', '').replace(' PM', '').padStart(5, '0');
+                        const isCoachBooked = selectedCoach ? (bookedCoachSlots[selectedCoach.id] || []).includes(val) : false;
                         return (
-                          <button key={t} className={`time-btn ${sessionTime === val ? 'active' : ''}`} onClick={() => setSessionTime(val)}>{t}</button>
+                          <button key={t} className={`time-btn ${sessionTime === val ? 'active' : ''}`} disabled={isCoachBooked} onClick={() => !isCoachBooked && setSessionTime(val)} title={isCoachBooked ? 'Coach unavailable at this time' : t}>{t}</button>
                         );
                       })}
                     </div>

@@ -30,7 +30,10 @@ type Booking = {
 export default function FoodPage() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    // Restore cart from localStorage on mount
+    try { const saved = localStorage.getItem('picklehub_food_cart'); return saved ? JSON.parse(saved) : []; } catch { return []; }
+  });
   const [activeCategory, setActiveCategory] = useState<'all' | 'snacks' | 'drinks' | 'meals'>('all');
   const [deliveryType, setDeliveryType] = useState<'court' | 'counter'>('court');
   const [selectedBooking, setSelectedBooking] = useState<string>('');
@@ -39,6 +42,11 @@ export default function FoodPage() {
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [error, setError] = useState('');
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
+
+  // Persist cart to localStorage whenever it changes
+  useEffect(() => {
+    try { localStorage.setItem('picklehub_food_cart', JSON.stringify(cart)); } catch {}
+  }, [cart]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -88,6 +96,7 @@ export default function FoodPage() {
       }).select().single();
       if (error) throw error;
       // Redirect to PayMongo
+      try { localStorage.removeItem('picklehub_food_cart'); } catch {}
       await redirectToPayment({
         amount: cartTotal,
         description: `PickleHub Food Order - ${cart.map(c => c.item.name).join(', ')}`,
@@ -184,7 +193,7 @@ export default function FoodPage() {
       `}</style>
 
       {/* NAV */}
-      <Navbar activeLink="/courts" />
+      <Navbar activeLink="/food" />
 
 
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px' }}>
