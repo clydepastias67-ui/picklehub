@@ -6,7 +6,7 @@ import { ThemeToggle } from '@/lib/ThemeToggle';
 
 type Booking = { id:string; status:string; total_price:number; created_at:string; start_time:string; courts?:{name:string}; };
 type Court = { id:string; name:string; type:string; price_per_hour:number; is_available:boolean; image_url?:string; description?:string; };
-type Coach = { id:string; name:string; skill_level:string; price_per_session:number; is_available:boolean; bio?:string; };
+type Coach = { id:string; name:string; skill_level:string; price_per_session:number; is_available:boolean; bio?:string; image_url?:string; };
 type MenuItem = { id:string; name:string; category:string; price:number; is_available:boolean; image_url?:string; description?:string; stock?:number; };
 type Product = { id:string; name:string; category:string; price?:number; rental_price?:number; stock:number; low_stock_threshold?:number; is_for_sale:boolean; is_for_rent:boolean; image_url?:string; description?:string; };
 type Tournament = { id:string; name:string; date:string; max_players:number; entry_fee:number; status:string; description?:string; };
@@ -610,11 +610,16 @@ export default function AdminDashboard() {
               </div>
               <div className="table-wrap">
                 <table className="tbl">
-                  <thead><tr><th>Name</th><th>Skill level</th><th>₱/session</th><th>Available</th><th>Actions</th></tr></thead>
+                  <thead><tr><th>Image</th><th>Name</th><th>Skill level</th><th>₱/session</th><th>Available</th><th>Actions</th></tr></thead>
                   <tbody>
-                    {coaches.length===0?<tr><td colSpan={5}><div className="empty">No coaches yet — add one!</div></td></tr>:
+                    {coaches.length===0?<tr><td colSpan={6}><div className="empty">No coaches yet — add one!</div></td></tr>:
                     coaches.map(coach=>(
                       <tr key={coach.id}>
+                        <td>
+                          <div style={{width:40,height:40,borderRadius:'50%',overflow:'hidden',background:'var(--accent-bg)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,fontWeight:700,color:'var(--accent)'}}>
+                            {coach.image_url?<img src={coach.image_url} alt={coach.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:coach.name?.[0]?.toUpperCase()||'?'}
+                          </div>
+                        </td>
                         <td style={{fontWeight:600}}>{coach.name}</td>
                         <td style={{textTransform:'capitalize'}}>{coach.skill_level}</td>
                         <td style={{color:'var(--accent)',fontWeight:700}}>₱{coach.price_per_session}</td>
@@ -625,6 +630,7 @@ export default function AdminDashboard() {
                         </td>
                         <td>
                           <div className="actions">
+                            <button className="img-btn" onClick={()=>triggerUpload(coach.id,'coaches','coach-images')}>{uploadingId===coach.id?'...':'📷'}</button>
                             <button className="btn" onClick={()=>openEdit({...coach},'coaches')}>Edit</button>
                             <button className="btn danger" onClick={()=>handleDelete('coaches',coach.id,coach.name)}>Remove</button>
                           </div>
