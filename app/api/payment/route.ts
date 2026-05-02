@@ -24,10 +24,14 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         data: {
           attributes: {
-            amount: Math.round(amount * 100), // convert to centavos
+            amount: Math.round(amount * 100),
             description,
             currency: 'PHP',
-            remarks: `${type}:${referenceId}`, // used in webhook to identify record
+            remarks: `${type}:${referenceId}`,
+            redirect: {
+              success: `${process.env.NEXT_PUBLIC_APP_URL}/payment/success`,
+              failed: `${process.env.NEXT_PUBLIC_APP_URL}/payment/failed`,
+            },
           },
         },
       }),
@@ -37,7 +41,10 @@ export async function POST(req: Request) {
 
     if (!response.ok) {
       console.error('PayMongo error:', data);
-      return NextResponse.json({ error: data.errors?.[0]?.detail || 'Payment link creation failed' }, { status: 400 });
+      return NextResponse.json(
+        { error: data.errors?.[0]?.detail || 'Payment link creation failed' },
+        { status: 400 }
+      );
     }
 
     return NextResponse.json({

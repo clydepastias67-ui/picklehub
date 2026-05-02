@@ -155,21 +155,27 @@ export default function AdminDashboard() {
   // ── BRACKET GENERATION ──
   const generateBracket = async (tournamentId: string, format: string) => {
     // Fetch all registered players
-    const { data: regs } = await supabase
+    const { data: regs, error: regsError } = await supabase
       .from('tournament_registrations')
       .select('user_id, email')
       .eq('tournament_id', tournamentId);
 
-    if (!regs || regs.length < 2) { toast('Need at least 2 players to generate bracket'); return; }
+    console.log('[generateBracket] regs:', regs, 'error:', regsError);
+
+    if (regsError) { toast(`Error fetching players: ${regsError.message}`); return; }
+    if (!regs || regs.length < 2) { toast(`Need at least 2 players — found ${regs?.length ?? 0}`); return; }
 
     // Delete any existing matches for this tournament
-    await supabase.from('tournament_matches').delete().eq('tournament_id', tournamentId);
+    const { error: delError } = await supabase.from('tournament_matches').delete().eq('tournament_id', tournamentId);
+    if (delError) { console.log('[generateBracket] delete error:', delError); }
 
     // Build player list — use email prefix as display name
     const players: Player[] = regs.map((r: Record<string, unknown>, i: number) => ({
       id: r.user_id as string,
       name: r.email ? String(r.email).split('@')[0] : `Player ${i + 1}`,
     }));
+
+    console.log('[generateBracket] players:', players, 'format:', format);
 
     // Shuffle players
     for (let i = players.length - 1; i > 0; i--) {
@@ -197,7 +203,7 @@ export default function AdminDashboard() {
       const matchesInRound = size / Math.pow(2, r);
       const roundIds: string[] = [];
       for (let m = 0; m < matchesInRound; m++) {
-        const { data } = await supabase.from('tournament_matches').insert({
+        const { data, error: insertError } = await supabase.from('tournament_matches').insert({
           tournament_id: tournamentId,
           format: 'single_elim',
           round: r,
@@ -207,6 +213,7 @@ export default function AdminDashboard() {
           player1_name: null, player2_name: null,
           status: 'pending',
         }).select('id').single();
+        if (insertError) { console.log('[generateSingleElim] insert error:', insertError); }
         if (data) roundIds.push(data.id);
       }
       matchIds.push(roundIds);
