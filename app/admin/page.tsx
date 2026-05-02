@@ -9,7 +9,7 @@ type Court = { id:string; name:string; type:string; price_per_hour:number; is_av
 type Coach = { id:string; name:string; skill_level:string; price_per_session:number; is_available:boolean; bio?:string; image_url?:string; };
 type MenuItem = { id:string; name:string; category:string; price:number; is_available:boolean; image_url?:string; description?:string; stock?:number; };
 type Product = { id:string; name:string; category:string; price?:number; rental_price?:number; stock:number; low_stock_threshold?:number; is_for_sale:boolean; is_for_rent:boolean; image_url?:string; description?:string; };
-type Tournament = { id:string; name:string; date:string; max_players:number; entry_fee:number; status:string; description?:string; };
+type Tournament = { id:string; name:string; date:string; max_players:number; entry_fee:number; status:string; format:string; description?:string; };
 type Admin = { id:string; email:string; created_at:string; };
 type Employee = { id:string; email:string; name:string; role:string; created_at:string; };
 
@@ -29,7 +29,7 @@ const EMPTY_COURT   = { name:'', type:'indoor', price_per_hour:0, is_available:t
 const EMPTY_MENU    = { name:'', category:'snacks', price:0, is_available:true, description:'', stock:0 };
 const EMPTY_PRODUCT = { name:'', category:'rackets', price:0, rental_price:0, stock:0, is_for_sale:true, is_for_rent:false, description:'' };
 const EMPTY_COACH   = { name:'', skill_level:'beginner', price_per_session:0, is_available:true, bio:'' };
-const EMPTY_TOURNAMENT = { name:'', date:'', max_players:0, entry_fee:0, status:'open', description:'' };
+const EMPTY_TOURNAMENT = { name:'', date:'', max_players:0, entry_fee:0, status:'open', format:'single_elim', description:'' };
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -150,6 +150,206 @@ export default function AdminDashboard() {
   };
 
   const toast = (msg:string) => { setActionMsg(msg); setTimeout(()=>setActionMsg(''),2500); };
+
+
+  // ── BRACKET GENERATION ──
+  const generateBracket = async (tournamentId: string, format: string) => {
+    // Fetch all registered players
+    const { data: regs } = await supabase
+      .from('tournament_registrations')
+      .select('user_id, profiles(full_name)')
+      .eq('tournament_id', tournamentId);
+
+    if (!regs || regs.length < 2) { toast('Need at least 2 players to generate bracket'); return; }
+
+    // Delete any existing matches for this tournament
+    await supabase.from('tournament_matches').delete().eq('tournament_id', tournamentId);
+
+    const players = regs.map((r: Record<string, unknown>) => ({
+      id: r.user_id as string,
+      name: (r.profiles as Record<string, string> | null)?.full_name || 'Player',
+    }));
+
+    // Shuffle players
+    for (let i = players.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [players[i], players[j]] = [players[j], players[i]];
+    }
+
+    if (format === 'single_elim') await generateSingleElim(tournamentId, players);
+    else if (format === 'round_robin') await generateRoundRobin(tournamentId, players);
+    else if (format === 'double_elim') await generateDoubleElim(tournamentId, players);
+  };
+
+  type Player = { id: string; name: string };
+
+  const generateSingleElim = async (tournamentId: string, players: Player[]) => {
+    // Pad to next power of 2 with byes
+    const size = Math.pow(2, Math.ceil(Math.log2(players.length)));
+    while (players.length < size) players.push({ id: '', name: 'BYE' });
+
+    const rounds = Math.log2(size);
+    // Insert all matches round by round, linking next_match_id after creation
+    const matchIds: string[][] = []; // matchIds[round][matchIndex]
+
+    for (let r = 1; r <= rounds; r++) {
+      const matchesInRound = size / Math.pow(2, r);
+      const roundIds: string[] = [];
+      for (let m = 0; m < matchesInRound; m++) {
+        const { data } = await supabase.from('tournament_matches').insert({
+          tournament_id: tournamentId,
+          format: 'single_elim',
+          round: r,
+          match_number: m + 1,
+          bracket: r === rounds ? 'grand_final' : 'winners',
+          player1_id: null, player2_id: null,
+          player1_name: null, player2_name: null,
+          status: 'pending',
+        }).select('id').single();
+        if (data) roundIds.push(data.id);
+      }
+      matchIds.push(roundIds);
+    }
+
+    // Seed Round 1 players
+    const r1Ids = matchIds[0];
+    for (let m = 0; m < r1Ids.length; m++) {
+      const p1 = players[m * 2];
+      const p2 = players[m * 2 + 1];
+      const isBye = p2.id === '' || p1.id === '';
+      await supabase.from('tournament_matches').update({
+        player1_id: p1.id || null, player1_name: p1.id ? p1.name : null,
+        player2_id: p2.id || null, player2_name: p2.id ? p2.name : null,
+        status: isBye ? 'bye' : 'pending',
+        winner_id: isBye ? (p1.id || null) : null,
+      }).eq('id', r1Ids[m]);
+    }
+
+    // Link next_match_id: every 2 matches in round r feed into 1 match in round r+1
+    for (let r = 0; r < matchIds.length - 1; r++) {
+      for (let m = 0; m < matchIds[r].length; m++) {
+        const nextMatchId = matchIds[r + 1][Math.floor(m / 2)];
+        await supabase.from('tournament_matches').update({ next_match_id: nextMatchId }).eq('id', matchIds[r][m]);
+      }
+    }
+
+    // Auto-advance any bye matches
+    for (const mid of matchIds[0]) {
+      const { data: m } = await supabase.from('tournament_matches').select('*').eq('id', mid).single();
+      if (m?.status === 'bye' && m.next_match_id && m.winner_id) {
+        const winnerId = m.winner_id;
+        const winnerName = m.player1_id === winnerId ? m.player1_name : m.player2_name;
+        const { data: nm } = await supabase.from('tournament_matches').select('*').eq('id', m.next_match_id).single();
+        if (nm) {
+          if (!nm.player1_id) await supabase.from('tournament_matches').update({ player1_id: winnerId, player1_name: winnerName }).eq('id', m.next_match_id);
+          else await supabase.from('tournament_matches').update({ player2_id: winnerId, player2_name: winnerName }).eq('id', m.next_match_id);
+        }
+      }
+    }
+  };
+
+  const generateRoundRobin = async (tournamentId: string, players: Player[]) => {
+    // Every player plays every other player once
+    let matchNum = 0;
+    for (let i = 0; i < players.length; i++) {
+      for (let j = i + 1; j < players.length; j++) {
+        matchNum++;
+        await supabase.from('tournament_matches').insert({
+          tournament_id: tournamentId,
+          format: 'round_robin',
+          round: 1,
+          match_number: matchNum,
+          bracket: 'winners',
+          player1_id: players[i].id, player1_name: players[i].name,
+          player2_id: players[j].id, player2_name: players[j].name,
+          status: 'pending',
+        });
+      }
+    }
+  };
+
+  const generateDoubleElim = async (tournamentId: string, players: Player[]) => {
+    // Pad to next power of 2
+    const size = Math.pow(2, Math.ceil(Math.log2(players.length)));
+    while (players.length < size) players.push({ id: '', name: 'BYE' });
+    const rounds = Math.log2(size);
+
+    // Create winners bracket (same as single elim)
+    const wIds: string[][] = [];
+    for (let r = 1; r <= rounds; r++) {
+      const matchesInRound = size / Math.pow(2, r);
+      const roundIds: string[] = [];
+      for (let m = 0; m < matchesInRound; m++) {
+        const { data } = await supabase.from('tournament_matches').insert({
+          tournament_id: tournamentId, format: 'double_elim', round: r, match_number: m + 1,
+          bracket: r === rounds ? 'winners' : 'winners',
+          player1_id: null, player2_id: null, player1_name: null, player2_name: null, status: 'pending',
+        }).select('id').single();
+        if (data) roundIds.push(data.id);
+      }
+      wIds.push(roundIds);
+    }
+
+    // Create losers bracket (roughly same number of rounds)
+    const lIds: string[][] = [];
+    for (let r = 1; r <= rounds * 2 - 1; r++) {
+      const matchesInRound = Math.max(1, size / Math.pow(2, Math.ceil(r / 2) + 1));
+      const roundIds: string[] = [];
+      for (let m = 0; m < matchesInRound; m++) {
+        const { data } = await supabase.from('tournament_matches').insert({
+          tournament_id: tournamentId, format: 'double_elim', round: r, match_number: m + 1,
+          bracket: 'losers',
+          player1_id: null, player2_id: null, player1_name: null, player2_name: null, status: 'pending',
+        }).select('id').single();
+        if (data) roundIds.push(data.id);
+      }
+      lIds.push(roundIds);
+    }
+
+    // Grand final
+    const { data: gf } = await supabase.from('tournament_matches').insert({
+      tournament_id: tournamentId, format: 'double_elim', round: rounds * 2, match_number: 1,
+      bracket: 'grand_final', player1_id: null, player2_id: null, status: 'pending',
+    }).select('id').single();
+
+    // Seed Round 1 of winners bracket
+    for (let m = 0; m < wIds[0].length; m++) {
+      const p1 = players[m * 2], p2 = players[m * 2 + 1];
+      await supabase.from('tournament_matches').update({
+        player1_id: p1.id || null, player1_name: p1.id ? p1.name : null,
+        player2_id: p2.id || null, player2_name: p2.id ? p2.name : null,
+        status: (p2.id === '' || p1.id === '') ? 'bye' : 'pending',
+      }).eq('id', wIds[0][m]);
+    }
+
+    // Link winners bracket progression + losers drops
+    for (let r = 0; r < wIds.length - 1; r++) {
+      for (let m = 0; m < wIds[r].length; m++) {
+        const nextW = wIds[r + 1][Math.floor(m / 2)];
+        const dropL = lIds[r] ? lIds[r][m] : null;
+        await supabase.from('tournament_matches').update({
+          next_match_id: nextW,
+          loser_next_match_id: dropL,
+        }).eq('id', wIds[r][m]);
+      }
+    }
+
+    // Winners bracket final loser drops to losers final
+    const wFinalId = wIds[wIds.length - 1][0];
+    const lFinalId = lIds[lIds.length - 1]?.[0];
+    if (wFinalId && lFinalId) await supabase.from('tournament_matches').update({ next_match_id: gf?.id, loser_next_match_id: lFinalId }).eq('id', wFinalId);
+
+    // Link losers bracket progression
+    for (let r = 0; r < lIds.length - 1; r++) {
+      for (let m = 0; m < lIds[r].length; m++) {
+        const nextL = lIds[r + 1]?.[Math.floor(m / 2)] || gf?.id;
+        if (nextL) await supabase.from('tournament_matches').update({ next_match_id: nextL }).eq('id', lIds[r][m]);
+      }
+    }
+
+    // Losers bracket winner goes to grand final as player2
+    if (lFinalId && gf) await supabase.from('tournament_matches').update({ next_match_id: gf.id }).eq('id', lFinalId);
+  };
 
   const handleSignOut = async () => { await supabase.auth.signOut(); window.location.href='/'; };
 
@@ -741,12 +941,13 @@ export default function AdminDashboard() {
               </div>
               <div className="table-wrap">
                 <table className="tbl">
-                  <thead><tr><th>Name</th><th>Date</th><th>Max players</th><th>Entry fee</th><th>Status</th><th>Actions</th></tr></thead>
+                  <thead><tr><th>Name</th><th>Format</th><th>Date</th><th>Players</th><th>Entry fee</th><th>Status</th><th>Actions</th></tr></thead>
                   <tbody>
                     {tournaments.length===0?<tr><td colSpan={6}><div className="empty">No tournaments yet — add one!</div></td></tr>:
                     tournaments.map(t=>(
                       <tr key={t.id}>
                         <td style={{fontWeight:600}}>{t.name}</td>
+                        <td><span style={{fontSize:11,padding:'2px 8px',borderRadius:6,background:'var(--bg-hover)',color:'var(--text-secondary)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.04em'}}>{t.format==='single_elim'?'Single Elim':t.format==='double_elim'?'Double Elim':'Round Robin'}</span></td>
                         <td>{fmtDate(t.date)}</td>
                         <td>{t.max_players}</td>
                         <td style={{color:'var(--accent)',fontWeight:700}}>₱{t.entry_fee}</td>
@@ -754,7 +955,13 @@ export default function AdminDashboard() {
                         <td>
                           <div className="actions">
                             <button className="btn" onClick={()=>openEdit({...t},'tournaments')}>Edit</button>
-                            {t.status==='open'&&<button className="btn primary" onClick={async()=>{await supabase.from('tournaments').update({status:'ongoing'}).eq('id',t.id);await fetchAll();}}>Start</button>}
+                            {t.status==='open'&&<button className="btn primary" onClick={async()=>{
+                              // Generate bracket then start
+                              await generateBracket(t.id, t.format);
+                              await supabase.from('tournaments').update({status:'ongoing'}).eq('id',t.id);
+                              await fetchAll();
+                              toast('Bracket generated! Tournament started.');
+                            }}>▶ Start & generate bracket</button>}
                             {t.status==='ongoing'&&<button className="btn" onClick={async()=>{await supabase.from('tournaments').update({status:'completed'}).eq('id',t.id);await fetchAll();}}>Complete</button>}
                             <button className="btn danger" onClick={()=>handleDelete('tournaments',t.id,t.name)}>Remove</button>
                           </div>
@@ -882,6 +1089,12 @@ export default function AdminDashboard() {
                   ) : key==='status' && editTable==='tournaments' ? (
                     <select className="form-select" value={String(val)} onChange={e=>setEditItem({...editItem,[key]:e.target.value})} title="Status" aria-label="Status">
                       {['open','ongoing','completed'].map(c=><option key={c} value={c}>{c}</option>)}
+                    </select>
+                  ) : key==='format' && editTable==='tournaments' ? (
+                    <select className="form-select" value={String(val)} onChange={e=>setEditItem({...editItem,[key]:e.target.value})} title="Format" aria-label="Format">
+                      <option value="single_elim">Single Elimination</option>
+                      <option value="double_elim">Double Elimination</option>
+                      <option value="round_robin">Round Robin</option>
                     </select>
                   ) : (
                     <input

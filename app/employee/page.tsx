@@ -23,6 +23,12 @@ type CoachingSession = {
   coaches?: { name: string };
 };
 type Court = { id: string; name: string; type: string; is_available: boolean; };
+type TournamentMatch = {
+  id: string; tournament_id: string; format: string; round: number; match_number: number;
+  bracket: string; player1_name: string | null; player2_name: string | null;
+  player1_score: number; player2_score: number; winner_id: string | null; status: string;
+};
+type Tournament = { id: string; name: string; format: string; status: string; date: string; };
 
 const TABS = [
   { id: 'overview',  label: 'Today',      icon: '📊' },
@@ -31,6 +37,7 @@ const TABS = [
   { id: 'shop',      label: 'Shop',       icon: '🛍' },
   { id: 'coaching',  label: 'Coaching',   icon: '👤' },
   { id: 'courts',    label: 'Courts',     icon: '🏓' },
+  { id: 'tournaments', label: 'Tournaments', icon: '🏆' },
 ];
 
 export default function EmployeeDashboard() {
@@ -47,6 +54,9 @@ export default function EmployeeDashboard() {
   const [sessions, setSessions] = useState<CoachingSession[]>([]);
   const [courts, setCourts] = useState<Court[]>([]);
   const [actionMsg, setActionMsg] = useState('');
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [matches, setMatches] = useState<TournamentMatch[]>([]);
+  const [activeTournament, setActiveTournament] = useState<string | null>(null);
 
   // ── NOTIFICATIONS ──
   type Notif = { id:string; type:'booking'|'food'|'shop'|'coaching'|'tournament'; title:string; body:string; time:Date; read:boolean; };
@@ -129,6 +139,7 @@ export default function EmployeeDashboard() {
       { data: sData },
       { data: cData },
       { data: courtData },
+      { data: tData },
     ] = await Promise.all([
       // Today's bookings
       supabase.from('bookings').select('*, courts(name,type)')
@@ -153,6 +164,8 @@ export default function EmployeeDashboard() {
         .order('session_time'),
       // All courts
       supabase.from('courts').select('*').order('name'),
+      // Ongoing tournaments
+      supabase.from('tournaments').select('*').eq('status', 'ongoing').order('date'),
     ]);
 
     setBookings(bData || []);
@@ -160,9 +173,23 @@ export default function EmployeeDashboard() {
     setShopOrders(sData || []);
     setSessions(cData || []);
     setCourts(courtData || []);
+    setTournaments(tData || []);
   };
 
   const toast = (msg: string) => { setActionMsg(msg); setTimeout(() => setActionMsg(''), 2500); };
+
+  // Fetch matches when tournaments tab is opened or tournament selected
+  const fetchMatches = async (tournamentId: string) => {
+    const { data } = await supabase.from('tournament_matches').select('*').eq('tournament_id', tournamentId).order('round').order('match_number');
+    setMatches(prev => [...prev.filter(m => m.tournament_id !== tournamentId), ...(data || [])]);
+  };
+
+  useEffect(() => {
+    if (activeTab === 'tournaments' && tournaments.length > 0) {
+      const tid = activeTournament || tournaments[0]?.id;
+      if (tid) { setActiveTournament(tid); fetchMatches(tid); }
+    }
+  }, [activeTab, activeTournament, tournaments]);
 
   const handleSignOut = async () => { await supabase.auth.signOut(); window.location.href = '/'; };
 
@@ -581,6 +608,131 @@ export default function EmployeeDashboard() {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+
+          {/* ── TOURNAMENTS ── */}
+          {activeTab === 'tournaments' && (
+            <div>
+              <h1 className="section-title">Tournament Brackets</h1>
+              {tournaments.length === 0 ? (
+                <div className="table-wrap"><div className="empty">No ongoing tournaments right now</div></div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  {/* Tournament selector */}
+                  {tournaments.length > 1 && (
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {tournaments.map(t => (
+                        <button key={t.id} onClick={() => setActiveTournament(t.id)} style={{ padding: '7px 16px', borderRadius: 20, border: `1px solid ${activeTournament === t.id ? 'var(--accent)' : 'var(--border)'}`, background: activeTournament === t.id ? 'var(--accent)' : 'transparent', color: activeTournament === t.id ? '#fff' : 'var(--text-muted)', fontFamily: "'Barlow Condensed',sans-serif", fontSize: 12, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                          {t.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Bracket view */}
+                  {(() => {
+                    const tournament = tournaments.find(t => t.id === (activeTournament || tournaments[0]?.id));
+                    if (!tournament) return null;
+                    const tMatches = matches.filter(m => m.tournament_id === tournament.id);
+                    const formatLabel: Record<string, string> = { single_elim: 'Single Elimination', double_elim: 'Double Elimination', round_robin: 'Round Robin' };
+
+                    if (tournament.format === 'round_robin') {
+                      // Round robin: flat list of all matches
+                      return (
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 12, letterSpacing: '.06em' }}>{tournament.name} · {formatLabel[tournament.format]}</div>
+                          <div className="table-wrap">
+                            <table className="tbl">
+                              <thead><tr><th>#</th><th>Player 1</th><th>Score</th><th>Player 2</th><th>Status</th><th>Action</th></tr></thead>
+                              <tbody>
+                                {tMatches.length === 0 ? <tr><td colSpan={6}><div className="empty">No matches yet</div></td></tr> :
+                                tMatches.map(m => (
+                                  <tr key={m.id}>
+                                    <td style={{ color: 'var(--text-muted)', fontFamily: "'Barlow',sans-serif" }}>{m.match_number}</td>
+                                    <td style={{ fontWeight: 600 }}>{m.player1_name || 'TBD'}</td>
+                                    <td style={{ fontWeight: 800, color: 'var(--accent)', fontFamily: "'Barlow',sans-serif" }}>{m.player1_score} – {m.player2_score}</td>
+                                    <td style={{ fontWeight: 600 }}>{m.player2_name || 'TBD'}</td>
+                                    <td><span className={`badge badge-${m.status}`}>{m.status}</span></td>
+                                    <td>
+                                      {m.status !== 'completed' && m.status !== 'bye' && (
+                                        <button className="btn primary" onClick={() => window.location.href = `/scoreboard/${m.id}`}>▶ Score</button>
+                                      )}
+                                      {m.status === 'completed' && <span style={{ fontSize: 12, color: 'var(--success-text)', fontWeight: 700 }}>✓ Done</span>}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // Single/Double elim: bracket tree view
+                    const brackets = tournament.format === 'double_elim'
+                      ? ['winners', 'losers', 'grand_final']
+                      : ['winners', 'grand_final'];
+
+                    return (
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 12, letterSpacing: '.06em' }}>{tournament.name} · {formatLabel[tournament.format]}</div>
+                        {brackets.map(bracketType => {
+                          const bracketMatches = tMatches.filter(m => m.bracket === bracketType);
+                          if (bracketMatches.length === 0) return null;
+                          const rounds = [...new Set(bracketMatches.map(m => m.round))].sort((a, b) => a - b);
+                          const bracketLabels: Record<string, string> = { winners: 'Winners Bracket', losers: 'Losers Bracket', grand_final: 'Grand Final' };
+                          return (
+                            <div key={bracketType} style={{ marginBottom: 24 }}>
+                              <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.08em', color: bracketType === 'grand_final' ? 'var(--accent)' : 'var(--text-muted)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                {bracketType === 'grand_final' && '🏆 '}{bracketLabels[bracketType]}
+                              </div>
+                              <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}>
+                                {rounds.map(round => (
+                                  <div key={round} style={{ flexShrink: 0, minWidth: 200 }}>
+                                    <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text-hint)', marginBottom: 8, textAlign: 'center' }}>
+                                      {bracketType === 'grand_final' ? 'Grand Final' : `Round ${round}`}
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                      {bracketMatches.filter(m => m.round === round).map(m => (
+                                        <div key={m.id} style={{ background: 'var(--card-bg)', border: `1px solid ${m.status === 'completed' ? 'var(--success-border)' : m.status === 'ongoing' ? 'var(--accent-border)' : 'var(--border)'}`, borderRadius: 10, overflow: 'hidden' }}>
+                                          {/* Player 1 */}
+                                          <div style={{ padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', background: m.winner_id && m.player1_name && m.winner_id === (tMatches.find(x => x.id === m.id)?.winner_id) ? 'var(--success-bg)' : 'transparent' }}>
+                                            <span style={{ fontSize: 13, fontWeight: m.status === 'completed' ? 700 : 400, color: m.player1_name ? 'var(--text-primary)' : 'var(--text-hint)' }}>{m.player1_name || 'TBD'}</span>
+                                            <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)', minWidth: 20, textAlign: 'right' }}>{m.status !== 'pending' ? m.player1_score : '—'}</span>
+                                          </div>
+                                          {/* Player 2 */}
+                                          <div style={{ padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span style={{ fontSize: 13, fontWeight: m.status === 'completed' ? 700 : 400, color: m.player2_name ? 'var(--text-primary)' : 'var(--text-hint)' }}>{m.player2_name || 'TBD'}</span>
+                                            <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)', minWidth: 20, textAlign: 'right' }}>{m.status !== 'pending' ? m.player2_score : '—'}</span>
+                                          </div>
+                                          {/* Action */}
+                                          {m.status !== 'completed' && m.status !== 'bye' && m.player1_name && m.player2_name && (
+                                            <div style={{ padding: '6px 12px', borderTop: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
+                                              <button className="btn primary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => window.location.href = `/scoreboard/${m.id}`}>▶ Start scoring</button>
+                                            </div>
+                                          )}
+                                          {m.status === 'completed' && (
+                                            <div style={{ padding: '5px 12px', borderTop: '1px solid var(--border)', background: 'var(--success-bg)', fontSize: 11, color: 'var(--success-text)', fontWeight: 700, textAlign: 'center' }}>✓ Completed</div>
+                                          )}
+                                          {m.status === 'bye' && (
+                                            <div style={{ padding: '5px 12px', borderTop: '1px solid var(--border)', fontSize: 11, color: 'var(--text-hint)', textAlign: 'center' }}>BYE</div>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
           )}
 
