@@ -681,7 +681,7 @@ export default function EmployeeDashboard() {
                         {brackets.map(bracketType => {
                           const bracketMatches = tMatches.filter(m => m.bracket === bracketType);
                           if (bracketMatches.length === 0) return null;
-                          const rounds = [...new Set(bracketMatches.map(m => m.round))].sort((a, b) => a - b);
+                          const rounds = Array.from(new Set(bracketMatches.map(m => m.round))).sort((a, b) => a - b);
                           const bracketLabels: Record<string, string> = { winners: 'Winners Bracket', losers: 'Losers Bracket', grand_final: 'Grand Final' };
                           return (
                             <div key={bracketType} style={{ marginBottom: 24 }}>
