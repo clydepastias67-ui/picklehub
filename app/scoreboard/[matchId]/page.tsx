@@ -35,6 +35,8 @@ export default function ScoreboardPage() {
   const [ending, setEnding] = useState(false);
   const [p1Score, setP1Score] = useState(0);
   const [p2Score, setP2Score] = useState(0);
+  const [p1Sets, setP1Sets] = useState(0);
+  const [p2Sets, setP2Sets] = useState(0);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -222,6 +224,15 @@ export default function ScoreboardPage() {
               <div style={{ fontSize: 16, fontWeight: 800, textTransform: 'uppercase', marginBottom: 4 }}>{match.player1_name || 'TBD'}</div>
               {match.winner_id === match.player1_id && <div style={{ fontSize: 11, color: 'var(--success-text)', fontWeight: 700, marginBottom: 8 }}>🏆 WINNER</div>}
 
+              {/* Sets counter */}
+              {!isCompleted && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 4 }}>
+                  <button onClick={() => setP1Sets(s => Math.max(0, s - 1))} style={{ width: 24, height: 24, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>−</button>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', minWidth: 60, textAlign: 'center' }}>SETS: <span style={{ color: 'var(--accent)', fontSize: 16 }}>{p1Sets}</span></div>
+                  <button onClick={() => setP1Sets(s => s + 1)} style={{ width: 24, height: 24, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>+</button>
+                </div>
+              )}
+
               {/* Score control */}
               {!isCompleted && match.player1_id ? (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 16 }}>
@@ -247,6 +258,15 @@ export default function ScoreboardPage() {
               </div>
               <div style={{ fontSize: 16, fontWeight: 800, textTransform: 'uppercase', marginBottom: 4 }}>{match.player2_name || 'TBD'}</div>
               {match.winner_id === match.player2_id && <div style={{ fontSize: 11, color: 'var(--success-text)', fontWeight: 700, marginBottom: 8 }}>🏆 WINNER</div>}
+
+              {/* Sets counter */}
+              {!isCompleted && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 4 }}>
+                  <button onClick={() => setP2Sets(s => Math.max(0, s - 1))} style={{ width: 24, height: 24, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>−</button>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', minWidth: 60, textAlign: 'center' }}>SETS: <span style={{ color: 'var(--accent)', fontSize: 16 }}>{p2Sets}</span></div>
+                  <button onClick={() => setP2Sets(s => s + 1)} style={{ width: 24, height: 24, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>+</button>
+                </div>
+              )}
 
               {!isCompleted && match.player2_id ? (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 16 }}>
