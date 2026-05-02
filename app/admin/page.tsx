@@ -157,7 +157,7 @@ export default function AdminDashboard() {
     // Fetch all registered players
     const { data: regs } = await supabase
       .from('tournament_registrations')
-      .select('user_id, profiles(full_name)')
+      .select('user_id, email')
       .eq('tournament_id', tournamentId);
 
     if (!regs || regs.length < 2) { toast('Need at least 2 players to generate bracket'); return; }
@@ -165,9 +165,10 @@ export default function AdminDashboard() {
     // Delete any existing matches for this tournament
     await supabase.from('tournament_matches').delete().eq('tournament_id', tournamentId);
 
-    const players = regs.map((r: Record<string, unknown>) => ({
+    // Build player list — use email prefix as display name
+    const players: Player[] = regs.map((r: Record<string, unknown>, i: number) => ({
       id: r.user_id as string,
-      name: (r.profiles as Record<string, string> | null)?.full_name || 'Player',
+      name: r.email ? String(r.email).split('@')[0] : `Player ${i + 1}`,
     }));
 
     // Shuffle players

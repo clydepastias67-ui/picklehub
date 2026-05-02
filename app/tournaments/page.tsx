@@ -70,6 +70,7 @@ export default function TournamentsPage() {
       const { data: regData, error } = await supabase.from('tournament_registrations').insert({
         tournament_id: tournament.id,
         user_id: user.id,
+        email: user.email || '',
       }).select().single();
       if (error) throw error;
       setRegistrations(prev => [...prev, { tournament_id: tournament.id }]);
