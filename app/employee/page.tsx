@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { ThemeToggle } from '@/lib/ThemeToggle';
 
@@ -48,6 +48,20 @@ export default function EmployeeDashboard() {
   const [courts, setCourts] = useState<Court[]>([]);
   const [actionMsg, setActionMsg] = useState('');
 
+  // ── NOTIFICATIONS ──
+  type Notif = { id:string; type:'booking'|'food'|'shop'|'coaching'|'tournament'; title:string; body:string; time:Date; read:boolean; };
+  const [notifs, setNotifs] = useState<Notif[]>([]);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [toastNotif, setToastNotif] = useState<Notif|null>(null);
+  const unreadCount = notifs.filter(n => !n.read).length;
+
+  const pushNotif = (n: Omit<Notif,'id'|'time'|'read'>) => {
+    const notif:Notif = { ...n, id: crypto.randomUUID(), time: new Date(), read: false };
+    setNotifs(prev => [notif, ...prev].slice(0, 50));
+    setToastNotif(notif);
+    setTimeout(() => setToastNotif(null), 4000);
+  };
+
   const supabase = createClient();
   const today = new Date().toISOString().split('T')[0];
 
@@ -80,6 +94,32 @@ export default function EmployeeDashboard() {
       setLoading(false);
     };
     init();
+
+    // ── REALTIME SUBSCRIPTIONS ──
+    const channel = supabase.channel('employee-notifs')
+      .on('postgres_changes', { event:'INSERT', schema:'public', table:'bookings' }, () => {
+        pushNotif({ type:'booking', title:'New Court Booking', body:'A court was just booked' });
+        fetchAll();
+      })
+      .on('postgres_changes', { event:'INSERT', schema:'public', table:'food_orders' }, () => {
+        pushNotif({ type:'food', title:'New Food Order', body:'A new food order was placed' });
+        fetchAll();
+      })
+      .on('postgres_changes', { event:'INSERT', schema:'public', table:'shop_orders' }, () => {
+        pushNotif({ type:'shop', title:'New Shop Order', body:'A new shop order was placed' });
+        fetchAll();
+      })
+      .on('postgres_changes', { event:'INSERT', schema:'public', table:'coaching_sessions' }, () => {
+        pushNotif({ type:'coaching', title:'New Coaching Session', body:'A coaching session was booked' });
+        fetchAll();
+      })
+      .on('postgres_changes', { event:'INSERT', schema:'public', table:'tournament_registrations' }, () => {
+        pushNotif({ type:'tournament', title:'Tournament Registration', body:'Someone registered for a tournament' });
+        fetchAll();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const fetchAll = async () => {
@@ -241,6 +281,8 @@ export default function EmployeeDashboard() {
         .signout-btn:hover{border-color:var(--error-text);color:var(--error-text);}
         .empty{text-align:center;padding:40px;font-family:'Barlow',sans-serif;font-size:14px;color:var(--text-muted);}
         .actions{display:flex;gap:6px;flex-wrap:wrap;}
+        @keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
+        @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
       `}</style>
 
       {/* SIDEBAR */}
@@ -250,7 +292,13 @@ export default function EmployeeDashboard() {
             <div style={{ width: 8, height: 8, background: 'var(--accent)', borderRadius: '50%' }} />
             <span style={{ fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>PickleHub</span>
           </a>
-          <div style={{ fontSize: 10, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 4, fontFamily: "'Barlow',sans-serif" }}>Staff panel</div>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <div style={{ fontSize: 10, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 4, fontFamily: "'Barlow',sans-serif" }}>Staff panel</div>
+            <button onClick={() => setNotifOpen(o => !o)} title="Notifications" aria-label="Notifications" style={{ position:'relative', background:'none', border:'none', cursor:'pointer', padding:4, color:'var(--text-secondary)', fontSize:18, lineHeight:1 }}>
+              🔔
+              {unreadCount > 0 && <span style={{ position:'absolute', top:0, right:0, background:'var(--accent)', color:'#fff', borderRadius:'50%', width:16, height:16, fontSize:9, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'Barlow',sans-serif" }}>{unreadCount > 9 ? '9+' : unreadCount}</span>}
+            </button>
+          </div>
         </div>
         <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -290,6 +338,9 @@ export default function EmployeeDashboard() {
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <ThemeToggle />
+          <button onClick={() => setNotifOpen(o => !o)} title="Notifications" aria-label="Notifications" style={{ position:'relative', background:'none', border:'none', cursor:'pointer', color:'var(--text-primary)', fontSize:18, lineHeight:1, padding:4 }}>
+            🔔{unreadCount > 0 && <span style={{ position:'absolute', top:0, right:0, background:'var(--accent)', color:'#fff', borderRadius:'50%', width:14, height:14, fontSize:8, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'Barlow',sans-serif" }}>{unreadCount > 9 ? '9+' : unreadCount}</span>}
+          </button>
           <button onClick={() => setSidebarOpen(!sidebarOpen)} title="Menu" aria-label="Menu" style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', fontSize: 20 }}>☰</button>
         </div>
       </div>
@@ -548,6 +599,61 @@ export default function EmployeeDashboard() {
 
       {actionMsg && <div className="toast">{actionMsg}</div>}
       {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 40 }} />}
+
+      {/* ── NOTIFICATION DRAWER ── */}
+      {notifOpen && (
+        <div style={{ position:'fixed', inset:0, zIndex:200 }} onClick={() => setNotifOpen(false)}>
+          <div style={{ position:'absolute', top:0, right:0, bottom:0, width:'clamp(300px,35vw,420px)', background:'var(--card-bg)', borderLeft:'1px solid var(--border)', display:'flex', flexDirection:'column', animation:'slideIn .25s ease' }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding:'18px 20px', borderBottom:'1px solid var(--border)', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
+              <div style={{ fontSize:16, fontWeight:800, textTransform:'uppercase', letterSpacing:'.04em' }}>
+                Notifications {unreadCount > 0 && <span style={{ fontSize:11, background:'var(--accent)', color:'#fff', borderRadius:20, padding:'2px 8px', marginLeft:6 }}>{unreadCount} new</span>}
+              </div>
+              <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                {unreadCount > 0 && <button onClick={() => setNotifs(n => n.map(x => ({ ...x, read:true })))} style={{ background:'none', border:'none', fontSize:11, color:'var(--accent)', cursor:'pointer', fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, letterSpacing:'.04em', textTransform:'uppercase' }}>Mark all read</button>}
+                <button onClick={() => setNotifOpen(false)} style={{ background:'none', border:'none', color:'var(--text-muted)', cursor:'pointer', fontSize:20, lineHeight:1 }}>×</button>
+              </div>
+            </div>
+            <div style={{ flex:1, overflowY:'auto' }}>
+              {notifs.length === 0
+                ? <div style={{ padding:40, textAlign:'center', fontFamily:"'Barlow',sans-serif", fontSize:14, color:'var(--text-muted)' }}>No notifications yet</div>
+                : notifs.map(n => (
+                  <div key={n.id} onClick={() => setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, read:true } : x))} style={{ padding:'14px 20px', borderBottom:'1px solid var(--border)', cursor:'pointer', background:n.read ? 'transparent' : 'var(--accent-bg)', transition:'background .2s', display:'flex', gap:12, alignItems:'flex-start' }}>
+                    <span style={{ fontSize:20, flexShrink:0, marginTop:1 }}>
+                      {n.type === 'booking' ? '📅' : n.type === 'food' ? '🍱' : n.type === 'shop' ? '🛍' : n.type === 'coaching' ? '👤' : '🏆'}
+                    </span>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:13, fontWeight:700, marginBottom:2 }}>{n.title}</div>
+                      <div style={{ fontSize:12, fontFamily:"'Barlow',sans-serif", color:'var(--text-muted)', marginBottom:4 }}>{n.body}</div>
+                      <div style={{ fontSize:11, color:'var(--text-hint)', fontFamily:"'Barlow',sans-serif" }}>{n.time.toLocaleTimeString('en-PH', { hour:'2-digit', minute:'2-digit' })}</div>
+                    </div>
+                    {!n.read && <div style={{ width:8, height:8, background:'var(--accent)', borderRadius:'50%', flexShrink:0, marginTop:4 }} />}
+                  </div>
+                ))
+              }
+            </div>
+            {notifs.length > 0 && (
+              <div style={{ padding:'12px 20px', borderTop:'1px solid var(--border)', flexShrink:0 }}>
+                <button onClick={() => setNotifs([])} style={{ background:'none', border:'none', fontSize:11, color:'var(--error-text)', cursor:'pointer', fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, letterSpacing:'.04em', textTransform:'uppercase' }}>Clear all</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── TOAST NOTIFICATION ── */}
+      {toastNotif && (
+        <div style={{ position:'fixed', bottom:24, right:24, zIndex:300, background:'var(--card-bg)', border:'1px solid var(--accent-border)', borderRadius:12, padding:'14px 18px', maxWidth:320, boxShadow:'0 8px 32px rgba(0,0,0,.3)', animation:'slideUp .3s ease', display:'flex', gap:12, alignItems:'flex-start' }}>
+          <span style={{ fontSize:22, flexShrink:0 }}>
+            {toastNotif.type === 'booking' ? '📅' : toastNotif.type === 'food' ? '🍱' : toastNotif.type === 'shop' ? '🛍' : toastNotif.type === 'coaching' ? '👤' : '🏆'}
+          </span>
+          <div>
+            <div style={{ fontSize:13, fontWeight:800, textTransform:'uppercase', letterSpacing:'.04em', marginBottom:3 }}>{toastNotif.title}</div>
+            <div style={{ fontSize:12, fontFamily:"'Barlow',sans-serif", color:'var(--text-secondary)' }}>{toastNotif.body}</div>
+          </div>
+          <button onClick={() => setToastNotif(null)} style={{ background:'none', border:'none', color:'var(--text-muted)', cursor:'pointer', fontSize:16, lineHeight:1, flexShrink:0, marginLeft:4 }}>×</button>
+        </div>
+      )}
+
     </div>
   );
 }

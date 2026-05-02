@@ -64,6 +64,20 @@ export default function AdminDashboard() {
   const [uploadTarget, setUploadTarget] = useState<{id:string;table:string;bucket:string}|null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ── NOTIFICATIONS ──
+  type Notif = { id:string; type:'booking'|'food'|'shop'|'coaching'|'tournament'|'stock'; title:string; body:string; time:Date; read:boolean; };
+  const [notifs, setNotifs] = useState<Notif[]>([]);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [toastNotif, setToastNotif] = useState<Notif|null>(null);
+  const unreadCount = notifs.filter(n => !n.read).length;
+
+  const pushNotif = (n: Omit<Notif,'id'|'time'|'read'>) => {
+    const notif:Notif = { ...n, id: crypto.randomUUID(), time: new Date(), read: false };
+    setNotifs(prev => [notif, ...prev].slice(0, 50));
+    setToastNotif(notif);
+    setTimeout(() => setToastNotif(null), 4000);
+  };
+
   const supabase = createClient();
 
   useEffect(() => {
@@ -78,6 +92,44 @@ export default function AdminDashboard() {
       setLoading(false);
     };
     init();
+
+    // ── REALTIME SUBSCRIPTIONS ──
+    const channel = supabase.channel('admin-notifs')
+      .on('postgres_changes', { event:'INSERT', schema:'public', table:'bookings' }, payload => {
+        pushNotif({ type:'booking', title:'New Court Booking', body:`A court was just booked` });
+        fetchAll();
+      })
+      .on('postgres_changes', { event:'INSERT', schema:'public', table:'food_orders' }, payload => {
+        pushNotif({ type:'food', title:'New Food Order', body:`A new food order was placed` });
+        fetchAll();
+      })
+      .on('postgres_changes', { event:'INSERT', schema:'public', table:'shop_orders' }, payload => {
+        pushNotif({ type:'shop', title:'New Shop Order', body:`A new shop order was placed` });
+        fetchAll();
+      })
+      .on('postgres_changes', { event:'INSERT', schema:'public', table:'coaching_sessions' }, payload => {
+        pushNotif({ type:'coaching', title:'New Coaching Session', body:`A coaching session was booked` });
+        fetchAll();
+      })
+      .on('postgres_changes', { event:'INSERT', schema:'public', table:'tournament_registrations' }, payload => {
+        pushNotif({ type:'tournament', title:'Tournament Registration', body:`Someone registered for a tournament` });
+        fetchAll();
+      })
+      .on('postgres_changes', { event:'UPDATE', schema:'public', table:'products' }, payload => {
+        const p = payload.new as { name:string; stock:number; low_stock_threshold?:number };
+        const threshold = p.low_stock_threshold ?? 5;
+        if (p.stock === 0) pushNotif({ type:'stock', title:'Out of Stock', body:`${p.name} is out of stock!` });
+        else if (p.stock <= threshold) pushNotif({ type:'stock', title:'Low Stock Alert', body:`${p.name} only has ${p.stock} left` });
+        fetchAll();
+      })
+      .on('postgres_changes', { event:'UPDATE', schema:'public', table:'menu_items' }, payload => {
+        const m = payload.new as { name:string; stock?:number };
+        if ((m.stock ?? 99) === 0) pushNotif({ type:'stock', title:'Menu Item Out of Stock', body:`${m.name} is out of stock!` });
+        fetchAll();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   },[]);
 
   const fetchAll = async () => {
@@ -299,6 +351,8 @@ export default function AdminDashboard() {
         .signout-btn:hover{border-color:var(--error-text);color:var(--error-text);}
 
         .stock-badge{font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px;}
+        @keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
+        @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
         .stock-low{background:var(--error-bg);color:var(--error-text);}
         .stock-mid{background:var(--warning-bg);color:var(--warning-text);}
         .stock-ok{background:var(--success-bg);color:var(--success-text);}
@@ -316,7 +370,13 @@ export default function AdminDashboard() {
             <div style={{width:8,height:8,background:'var(--accent)',borderRadius:'50%'}}/>
             <span style={{fontSize:17,fontWeight:800,textTransform:'uppercase',letterSpacing:'0.06em'}}>PickleHub</span>
           </a>
-          <div style={{fontSize:10,color:'var(--accent)',letterSpacing:'0.1em',textTransform:'uppercase',marginTop:4,fontFamily:"'Barlow',sans-serif"}}>Admin panel</div>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+            <div style={{fontSize:10,color:'var(--accent)',letterSpacing:'0.1em',textTransform:'uppercase',marginTop:4,fontFamily:"'Barlow',sans-serif"}}>Admin panel</div>
+            <button onClick={()=>setNotifOpen(o=>!o)} title="Notifications" aria-label="Notifications" style={{position:'relative',background:'none',border:'none',cursor:'pointer',padding:4,color:'var(--text-secondary)',fontSize:18,lineHeight:1}}>
+              🔔
+              {unreadCount>0&&<span style={{position:'absolute',top:0,right:0,background:'var(--accent)',color:'#fff',borderRadius:'50%',width:16,height:16,fontSize:9,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'Barlow',sans-serif"}}>{unreadCount>9?'9+':unreadCount}</span>}
+            </button>
+          </div>
         </div>
         <div style={{padding:'12px 16px',borderBottom:'1px solid var(--border)',flexShrink:0}}>
           <div style={{display:'flex',alignItems:'center',gap:8}}>
@@ -354,6 +414,9 @@ export default function AdminDashboard() {
         <span style={{fontSize:15,fontWeight:800,textTransform:'uppercase'}}>Admin</span>
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
           <ThemeToggle />
+          <button onClick={()=>setNotifOpen(o=>!o)} title="Notifications" aria-label="Notifications" style={{position:'relative',background:'none',border:'none',cursor:'pointer',color:'var(--text-primary)',fontSize:18,lineHeight:1,padding:4}}>
+            🔔{unreadCount>0&&<span style={{position:'absolute',top:0,right:0,background:'var(--accent)',color:'#fff',borderRadius:'50%',width:14,height:14,fontSize:8,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'Barlow',sans-serif"}}>{unreadCount>9?'9+':unreadCount}</span>}
+          </button>
           <button onClick={()=>setSidebarOpen(!sidebarOpen)} title="Toggle menu" aria-label="Toggle menu" style={{background:'none',border:'none',color:'var(--text-primary)',cursor:'pointer',fontSize:20}}>☰</button>
         </div>
       </div>
@@ -371,6 +434,32 @@ export default function AdminDashboard() {
                   <h1 style={{fontSize:'clamp(24px,3vw,36px)',fontWeight:800,textTransform:'uppercase',lineHeight:1}}>Dashboard <span style={{color:'var(--accent)'}}>overview</span></h1>
                 </div>
               </div>
+              {/* ── LOW STOCK BANNER ── */}
+              {(() => {
+                const lowStock = [
+                  ...products.filter(p => p.stock === 0).map(p => ({ name: p.name, stock: p.stock, out: true })),
+                  ...products.filter(p => p.stock > 0 && p.stock <= (p.low_stock_threshold ?? 5)).map(p => ({ name: p.name, stock: p.stock, out: false })),
+                  ...menuItems.filter(m => (m.stock ?? 99) === 0).map(m => ({ name: m.name, stock: 0, out: true })),
+                ];
+                if (lowStock.length === 0) return null;
+                return (
+                  <div style={{background:'var(--warning-bg)',border:'1px solid var(--warning-text)',borderRadius:10,padding:'12px 16px',marginBottom:16,display:'flex',gap:12,alignItems:'flex-start'}}>
+                    <span style={{fontSize:20,flexShrink:0}}>⚠️</span>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:13,fontWeight:800,color:'var(--warning-text)',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:4}}>Stock alert — {lowStock.length} item{lowStock.length>1?'s':''} need attention</div>
+                      <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                        {lowStock.map((item,i)=>(
+                          <span key={i} style={{fontSize:11,fontFamily:"'Barlow',sans-serif",background:'rgba(0,0,0,.15)',padding:'2px 8px',borderRadius:20,color:'var(--warning-text)'}}>
+                            {item.name} — {item.out?'OUT OF STOCK':`${item.stock} left`}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <button onClick={()=>setActiveTab('shop')} style={{background:'none',border:'1px solid var(--warning-text)',color:'var(--warning-text)',borderRadius:6,padding:'4px 10px',fontSize:11,fontWeight:700,fontFamily:"'Barlow Condensed',sans-serif",cursor:'pointer',textTransform:'uppercase',letterSpacing:'.04em',flexShrink:0}}>View</button>
+                  </div>
+                );
+              })()}
+
               {/* Weekly report + email controls */}
               <div style={{background:'var(--card-bg)',border:'1px solid var(--border)',borderRadius:12,padding:'14px 18px',marginBottom:20,display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10}}>
                 <div>
@@ -835,6 +924,57 @@ export default function AdminDashboard() {
           </button>
         ))}
       </div>
+
+      {/* ── NOTIFICATION DRAWER ── */}
+      {notifOpen && (
+        <div style={{position:'fixed',inset:0,zIndex:200}} onClick={()=>setNotifOpen(false)}>
+          <div style={{position:'absolute',top:0,right:0,bottom:0,width:'clamp(300px,35vw,420px)',background:'var(--card-bg)',borderLeft:'1px solid var(--border)',display:'flex',flexDirection:'column',animation:'slideIn .25s ease'}} onClick={e=>e.stopPropagation()}>
+            <div style={{padding:'18px 20px',borderBottom:'1px solid var(--border)',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0}}>
+              <div style={{fontSize:16,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em'}}>Notifications {unreadCount>0&&<span style={{fontSize:11,background:'var(--accent)',color:'#fff',borderRadius:20,padding:'2px 8px',marginLeft:6}}>{unreadCount} new</span>}</div>
+              <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                {unreadCount>0&&<button onClick={()=>setNotifs(n=>n.map(x=>({...x,read:true})))} style={{background:'none',border:'none',fontSize:11,color:'var(--accent)',cursor:'pointer',fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,letterSpacing:'.04em',textTransform:'uppercase'}}>Mark all read</button>}
+                <button onClick={()=>setNotifOpen(false)} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:20,lineHeight:1}}>×</button>
+              </div>
+            </div>
+            <div style={{flex:1,overflowY:'auto'}}>
+              {notifs.length===0
+                ? <div style={{padding:40,textAlign:'center',fontFamily:"'Barlow',sans-serif",fontSize:14,color:'var(--text-muted)'}}>No notifications yet</div>
+                : notifs.map(n=>(
+                  <div key={n.id} onClick={()=>setNotifs(prev=>prev.map(x=>x.id===n.id?{...x,read:true}:x))} style={{padding:'14px 20px',borderBottom:'1px solid var(--border)',cursor:'pointer',background:n.read?'transparent':'var(--accent-bg)',transition:'background .2s',display:'flex',gap:12,alignItems:'flex-start'}}>
+                    <span style={{fontSize:20,flexShrink:0,marginTop:1}}>
+                      {n.type==='booking'?'📅':n.type==='food'?'🍱':n.type==='shop'?'🛍':n.type==='coaching'?'👤':n.type==='tournament'?'🏆':'⚠️'}
+                    </span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:13,fontWeight:700,marginBottom:2}}>{n.title}</div>
+                      <div style={{fontSize:12,fontFamily:"'Barlow',sans-serif",color:'var(--text-muted)',marginBottom:4}}>{n.body}</div>
+                      <div style={{fontSize:11,color:'var(--text-hint)',fontFamily:"'Barlow',sans-serif"}}>{n.time.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'})}</div>
+                    </div>
+                    {!n.read&&<div style={{width:8,height:8,background:'var(--accent)',borderRadius:'50%',flexShrink:0,marginTop:4}}/>}
+                  </div>
+                ))
+              }
+            </div>
+            {notifs.length>0&&<div style={{padding:'12px 20px',borderTop:'1px solid var(--border)',flexShrink:0}}>
+              <button onClick={()=>setNotifs([])} style={{background:'none',border:'none',fontSize:11,color:'var(--error-text)',cursor:'pointer',fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,letterSpacing:'.04em',textTransform:'uppercase'}}>Clear all</button>
+            </div>}
+          </div>
+        </div>
+      )}
+
+      {/* ── TOAST NOTIFICATION ── */}
+      {toastNotif&&(
+        <div style={{position:'fixed',bottom:24,right:24,zIndex:300,background:'var(--card-bg)',border:'1px solid var(--accent-border)',borderRadius:12,padding:'14px 18px',maxWidth:320,boxShadow:'0 8px 32px rgba(0,0,0,.3)',animation:'slideUp .3s ease',display:'flex',gap:12,alignItems:'flex-start'}}>
+          <span style={{fontSize:22,flexShrink:0}}>
+            {toastNotif.type==='booking'?'📅':toastNotif.type==='food'?'🍱':toastNotif.type==='shop'?'🛍':toastNotif.type==='coaching'?'👤':toastNotif.type==='tournament'?'🏆':'⚠️'}
+          </span>
+          <div>
+            <div style={{fontSize:13,fontWeight:800,textTransform:'uppercase',letterSpacing:'.04em',marginBottom:3}}>{toastNotif.title}</div>
+            <div style={{fontSize:12,fontFamily:"'Barlow',sans-serif",color:'var(--text-secondary)'}}>{toastNotif.body}</div>
+          </div>
+          <button onClick={()=>setToastNotif(null)} style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:16,lineHeight:1,flexShrink:0,marginLeft:4}}>×</button>
+        </div>
+      )}
+
     </div>
   );
 }
