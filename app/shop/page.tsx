@@ -58,6 +58,13 @@ export default function ShopPage() {
       setLoading(false);
     };
     fetchData();
+
+    // Realtime: update product stock live
+    const supabaseRt = createClient();
+    const channel = supabaseRt.channel('shop-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, fetchData)
+      .subscribe();
+    return () => { supabaseRt.removeChannel(channel); };
   }, []);
 
   const getCartItem = (id: string, type: 'purchase' | 'rental') =>

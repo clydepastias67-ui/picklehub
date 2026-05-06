@@ -51,6 +51,13 @@ export default function CourtsPage() {
       setLoading(false);
     };
     fetchData();
+
+    // Realtime: refresh when bookings change so slots stay accurate
+    const supabase2 = createClient();
+    const channel = supabase2.channel('courts-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, fetchData)
+      .subscribe();
+    return () => { supabase2.removeChannel(channel); };
   },[]);
 
   useEffect(() => {

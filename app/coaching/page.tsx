@@ -41,6 +41,14 @@ export default function CoachingPage() {
       setLoading(false);
     };
     fetchData();
+
+    // Realtime: update coach availability live
+    const supabaseRt = createClient();
+    const channel = supabaseRt.channel('coaching-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'coaching_sessions' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'coaches' }, fetchData)
+      .subscribe();
+    return () => { supabaseRt.removeChannel(channel); };
   }, []);
 
   // Re-fetch booked slots whenever the selected date changes

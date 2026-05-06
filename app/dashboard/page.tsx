@@ -59,6 +59,18 @@ export default function PlayerDashboard() {
     setMatchMap(prev => ({ ...prev, [tournamentId]: data || [] }));
   };
 
+  // Realtime: auto-refresh bracket when matches update
+  useEffect(() => {
+    if (!expandedBracket) return;
+    const supabase = createClient();
+    const channel = supabase.channel(`dashboard-bracket-${expandedBracket}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament_matches', filter: `tournament_id=eq.${expandedBracket}` }, () => {
+        fetchMatches(expandedBracket);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [expandedBracket]);
+
   const toggleBracket = (tournamentId: string) => {
     if (expandedBracket === tournamentId) { setExpandedBracket(null); return; }
     setExpandedBracket(tournamentId);

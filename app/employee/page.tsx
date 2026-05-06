@@ -184,6 +184,17 @@ export default function EmployeeDashboard() {
     setMatches(prev => [...prev.filter(m => m.tournament_id !== tournamentId), ...(data || [])]);
   };
 
+  // Realtime: auto-refresh bracket when matches update
+  useEffect(() => {
+    if (!activeTournament) return;
+    const channel = supabase.channel(`employee-bracket-${activeTournament}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament_matches', filter: `tournament_id=eq.${activeTournament}` }, () => {
+        fetchMatches(activeTournament);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [activeTournament]);
+
   useEffect(() => {
     if (activeTab === 'tournaments' && tournaments.length > 0) {
       const tid = activeTournament || tournaments[0]?.id;

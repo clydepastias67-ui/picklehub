@@ -66,6 +66,14 @@ export default function FoodPage() {
       setLoading(false);
     };
     fetchData();
+
+    // Realtime: update menu stock and active bookings live
+    const supabaseRt = createClient();
+    const channel = supabaseRt.channel('food-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, fetchData)
+      .subscribe();
+    return () => { supabaseRt.removeChannel(channel); };
   }, []);
 
   const getQty = (id: string) => cart.find(c => c.item.id === id)?.qty || 0;
