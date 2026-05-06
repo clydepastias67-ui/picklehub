@@ -78,6 +78,13 @@ export default function CourtsPage() {
       setBookedSlots(booked);
     };
     fetchBookedSlots();
+
+    // Realtime: refresh booked slots live for THIS court and date
+    const supabase = createClient();
+    const channel = supabase.channel(`booked-slots-${selectedCourt.id}-${selectedDate}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, fetchBookedSlots)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   },[selectedCourt,selectedDate]);
 
   const handleFoodQty = (item:MenuItem, delta:number) => {

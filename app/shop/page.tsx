@@ -61,8 +61,12 @@ export default function ShopPage() {
 
     // Realtime: update product stock live
     const supabaseRt = createClient();
+    const refreshProducts = async () => {
+      const { data } = await supabaseRt.from('products').select('*').order('category');
+      if (data) setProducts(data);
+    };
     const channel = supabaseRt.channel('shop-rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, refreshProducts)
       .subscribe();
     return () => { supabaseRt.removeChannel(channel); };
   }, []);

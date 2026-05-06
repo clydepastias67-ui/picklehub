@@ -69,8 +69,34 @@ export default function TournamentsPage() {
 
     // Realtime: update registration counts live
     const supabase2 = createClient();
+    const refreshCounts = async (tournamentId?: string) => {
+      const { data: tData } = await supabase2.from('tournaments').select('id');
+      if (!tData) return;
+      const ids = tournamentId ? [tournamentId] : tData.map(t => t.id);
+      const countMap: Record<string, number> = {};
+      await Promise.all(ids.map(async id => {
+        const { count } = await supabase2.from('tournament_registrations').select('*', { count: 'exact', head: true }).eq('tournament_id', id);
+        countMap[id] = count || 0;
+      }));
+      setCounts(prev => ({ ...prev, ...countMap }));
+    };
+
     const channel = supabase2.channel('tournaments-rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament_registrations' }, fetchData)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tournament_registrations' }, (payload) => {
+        const tid = (payload.new as {tournament_id:string}).tournament_id;
+        // Immediately increment count optimistically
+        setCounts(prev => ({ ...prev, [tid]: (prev[tid] || 0) + 1 }));
+        // Then fetch accurate count
+        refreshCounts(tid);
+        // Refresh registrations for current user
+        fetchData();
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'tournament_registrations' }, (payload) => {
+        const tid = (payload.old as {tournament_id:string}).tournament_id;
+        setCounts(prev => ({ ...prev, [tid]: Math.max(0, (prev[tid] || 1) - 1) }));
+        refreshCounts(tid);
+        fetchData();
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments' }, fetchData)
       .subscribe();
     return () => { supabase2.removeChannel(channel); };

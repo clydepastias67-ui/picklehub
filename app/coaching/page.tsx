@@ -44,9 +44,18 @@ export default function CoachingPage() {
 
     // Realtime: update coach availability live
     const supabaseRt = createClient();
+    const refreshCoaches = async () => {
+      const { data } = await supabaseRt.from('coaches').select('*').eq('is_available', true).order('skill_level');
+      if (data) setCoaches(data);
+    };
     const channel = supabaseRt.channel('coaching-rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'coaching_sessions' }, fetchData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'coaches' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'coaching_sessions' }, () => {
+        if (sessionDate) {
+          // Re-trigger the booked slots useEffect by resetting date briefly
+          setSessionDate(prev => prev);
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'coaches' }, refreshCoaches)
       .subscribe();
     return () => { supabaseRt.removeChannel(channel); };
   }, []);

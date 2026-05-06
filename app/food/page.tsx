@@ -69,9 +69,18 @@ export default function FoodPage() {
 
     // Realtime: update menu stock and active bookings live
     const supabaseRt = createClient();
+    const refreshMenu = async () => {
+      const { data } = await supabaseRt.from('menu_items').select('*').eq('is_available', true);
+      if (data) setMenuItems(data);
+    };
+    const refreshBookings = async () => {
+      if (!user) return;
+      const { data } = await supabaseRt.from('bookings').select('id,court_id,start_time').eq('user_id', user.id).eq('status', 'confirmed').gte('end_time', new Date().toISOString());
+      if (data) { setBookings(data); if (data.length > 0 && !selectedBooking) setSelectedBooking(data[0].id); }
+    };
     const channel = supabaseRt.channel('food-rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, fetchData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, refreshMenu)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, refreshBookings)
       .subscribe();
     return () => { supabaseRt.removeChannel(channel); };
   }, []);
