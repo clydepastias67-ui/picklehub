@@ -34,9 +34,11 @@ export default function PlayerDashboard() {
       const [{ data:bookingsData },{ data:sessionsData },{ data:tournamentsData }] = await Promise.all([
         supabase.from('bookings').select('*, courts(name,type)').eq('user_id',user.id).eq('status','confirmed').order('start_time',{ascending:false}).limit(10),
         supabase.from('coaching_sessions').select('*, coaches(name,skill_level)').eq('user_id',user.id).eq('status','confirmed').order('session_time',{ascending:false}).limit(5),
-        supabase.from('tournament_registrations').select('*, tournaments(name,date,status)').eq('user_id',user.id).order('created_at', {ascending: false}).limit(10),
+        supabase.from('tournament_registrations').select('*, tournaments(name,date,status,format)').eq('user_id',user.id).limit(20),
       ]);
-      setBookings(bookingsData||[]); setSessions(sessionsData||[]); setTournaments(tournamentsData||[]);
+      setBookings(bookingsData||[]); setSessions(sessionsData||[]);
+      console.log('[dashboard] tournamentsData:', tournamentsData);
+      setTournaments(tournamentsData||[]);
       setLoading(false);
     };
     fetchData();
