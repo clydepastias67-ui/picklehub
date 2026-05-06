@@ -165,7 +165,7 @@ export default function EmployeeDashboard() {
       // All courts
       supabase.from('courts').select('*').order('name'),
       // Ongoing tournaments
-      supabase.from('tournaments').select('*').eq('status', 'ongoing').order('date'),
+      supabase.from('tournaments').select('*').in('status', ['ongoing','completed']).order('date', {ascending: false}).limit(20),
     ]);
 
     setBookings(bData || []);
@@ -617,15 +617,16 @@ export default function EmployeeDashboard() {
             <div>
               <h1 className="section-title">Tournament Brackets</h1>
               {tournaments.length === 0 ? (
-                <div className="table-wrap"><div className="empty">No ongoing tournaments right now</div></div>
+                <div className="table-wrap"><div className="empty">No tournaments yet</div></div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                   {/* Tournament selector */}
                   {tournaments.length > 1 && (
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       {tournaments.map(t => (
-                        <button key={t.id} onClick={() => setActiveTournament(t.id)} style={{ padding: '7px 16px', borderRadius: 20, border: `1px solid ${activeTournament === t.id ? 'var(--accent)' : 'var(--border)'}`, background: activeTournament === t.id ? 'var(--accent)' : 'transparent', color: activeTournament === t.id ? '#fff' : 'var(--text-muted)', fontFamily: "'Barlow Condensed',sans-serif", fontSize: 12, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                        <button key={t.id} onClick={() => { setActiveTournament(t.id); fetchMatches(t.id); }} style={{ padding: '7px 16px', borderRadius: 20, border: `1px solid ${activeTournament === t.id ? 'var(--accent)' : 'var(--border)'}`, background: activeTournament === t.id ? 'var(--accent)' : 'transparent', color: activeTournament === t.id ? '#fff' : 'var(--text-muted)', fontFamily: "'Barlow Condensed',sans-serif", fontSize: 12, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '.04em', display: 'flex', alignItems: 'center', gap: 6 }}>
                           {t.name}
+                          <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 10, background: t.status === 'completed' ? 'rgba(255,255,255,.2)' : 'rgba(255,255,255,.15)', fontWeight: 800 }}>{t.status}</span>
                         </button>
                       ))}
                     </div>
@@ -670,64 +671,168 @@ export default function EmployeeDashboard() {
                       );
                     }
 
-                    // Single/Double elim: bracket tree view
-                    const brackets = tournament.format === 'double_elim'
-                      ? ['winners', 'losers', 'grand_final']
-                      : ['winners', 'grand_final'];
+                    // Single/Double elim: tree bracket view
+                    const winnerMatches = tMatches.filter(m => m.bracket === 'winners' || m.bracket === 'grand_final');
+                    const rounds = Array.from(new Set(winnerMatches.map(m => m.round))).sort((a,b) => a - b);
+                    const totalRounds = rounds.length;
+
+                    // Layout constants
+                    const BOX_W = 160;
+                    const BOX_H = 56; // two rows of 28px
+                    const COL_GAP = 80;
+                    const CHAMP_W = 110;
+                    const CHAMP_H = 40;
+
+                    // For each round, compute vertical spacing between match centers
+                    // Round 1 matches are tightest; each subsequent round doubles the gap
+                    const r1Matches = winnerMatches.filter(m => m.round === rounds[0]);
+                    const R1_MATCH_GAP = BOX_H + 24; // gap between match boxes in round 1
+                    const totalHeight = Math.max(300, r1Matches.length * (BOX_H + R1_MATCH_GAP) + R1_MATCH_GAP);
+
+                    // Compute Y center of each match box
+                    const matchY: Record<string, number> = {};
+                    rounds.forEach((round, ri) => {
+                      const roundMatches = winnerMatches.filter(m => m.round === round).sort((a,b) => a.match_number - b.match_number);
+                      const spacing = (BOX_H + R1_MATCH_GAP) * Math.pow(2, ri);
+                      const startY = spacing / 2 - BOX_H / 2;
+                      roundMatches.forEach((m, mi) => {
+                        matchY[m.id] = startY + mi * spacing + BOX_H / 2;
+                      });
+                    });
+
+                    const svgWidth = totalRounds * (BOX_W + COL_GAP) + COL_GAP + CHAMP_W + 40;
+                    const svgHeight = totalHeight + 60;
+
+                    // X position of each round column
+                    const colX = (ri: number) => 20 + ri * (BOX_W + COL_GAP);
+
+                    // Connector lines between rounds
+                    const lines: { x1:number;y1:number;x2:number;y2:number;x3:number;y3:number;x4:number;y4:number }[] = [];
+                    rounds.forEach((round, ri) => {
+                      if (ri >= rounds.length - 1) return;
+                      const roundMatches = winnerMatches.filter(m => m.round === round).sort((a,b) => a.match_number - b.match_number);
+                      for (let i = 0; i < roundMatches.length; i += 2) {
+                        const mA = roundMatches[i];
+                        const mB = roundMatches[i + 1];
+                        if (!mA) continue;
+                        const yA = matchY[mA.id];
+                        const yB = mB ? matchY[mB.id] : yA;
+                        const yMid = (yA + yB) / 2;
+                        const x1 = colX(ri) + BOX_W;
+                        const x2 = colX(ri) + BOX_W + COL_GAP / 2;
+                        const x3 = colX(ri + 1);
+                        lines.push({ x1, y1: yA, x2, y2: yA, x3: x2, y3: yMid, x4: x3, y4: yMid });
+                        if (mB) lines.push({ x1, y1: yB, x2, y2: yB, x3: x2, y3: yMid, x4: x3, y4: yMid });
+                      }
+                    });
+
+                    // Champion connector from last round
+                    const lastRound = rounds[rounds.length - 1];
+                    const finalMatch = winnerMatches.find(m => m.round === lastRound);
+                    const champX = colX(totalRounds - 1) + BOX_W + COL_GAP / 2;
+                    const champY = finalMatch ? matchY[finalMatch.id] : svgHeight / 2;
 
                     return (
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 12, letterSpacing: '.06em' }}>{tournament.name} · {formatLabel[tournament.format]}</div>
-                        {brackets.map(bracketType => {
-                          const bracketMatches = tMatches.filter(m => m.bracket === bracketType);
-                          if (bracketMatches.length === 0) return null;
-                          const rounds = Array.from(new Set(bracketMatches.map(m => m.round))).sort((a, b) => a - b);
-                          const bracketLabels: Record<string, string> = { winners: 'Winners Bracket', losers: 'Losers Bracket', grand_final: 'Grand Final' };
-                          return (
-                            <div key={bracketType} style={{ marginBottom: 24 }}>
-                              <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.08em', color: bracketType === 'grand_final' ? 'var(--accent)' : 'var(--text-muted)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                {bracketType === 'grand_final' && '🏆 '}{bracketLabels[bracketType]}
-                              </div>
-                              <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}>
-                                {rounds.map(round => (
-                                  <div key={round} style={{ flexShrink: 0, minWidth: 200 }}>
-                                    <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text-hint)', marginBottom: 8, textAlign: 'center' }}>
-                                      {bracketType === 'grand_final' ? 'Grand Final' : `Round ${round}`}
-                                    </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                      {bracketMatches.filter(m => m.round === round).map(m => (
-                                        <div key={m.id} style={{ background: 'var(--card-bg)', border: `1px solid ${m.status === 'completed' ? 'var(--success-border)' : m.status === 'ongoing' ? 'var(--accent-border)' : 'var(--border)'}`, borderRadius: 10, overflow: 'hidden' }}>
-                                          {/* Player 1 */}
-                                          <div style={{ padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', background: m.winner_id && m.player1_name && m.winner_id === (tMatches.find(x => x.id === m.id)?.winner_id) ? 'var(--success-bg)' : 'transparent' }}>
-                                            <span style={{ fontSize: 13, fontWeight: m.status === 'completed' ? 700 : 400, color: m.player1_name ? 'var(--text-primary)' : 'var(--text-hint)' }}>{m.player1_name || 'TBD'}</span>
-                                            <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)', minWidth: 20, textAlign: 'right' }}>{m.status !== 'pending' ? m.player1_score : '—'}</span>
-                                          </div>
-                                          {/* Player 2 */}
-                                          <div style={{ padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <span style={{ fontSize: 13, fontWeight: m.status === 'completed' ? 700 : 400, color: m.player2_name ? 'var(--text-primary)' : 'var(--text-hint)' }}>{m.player2_name || 'TBD'}</span>
-                                            <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)', minWidth: 20, textAlign: 'right' }}>{m.status !== 'pending' ? m.player2_score : '—'}</span>
-                                          </div>
-                                          {/* Action */}
-                                          {m.status !== 'completed' && m.status !== 'bye' && m.player1_name && m.player2_name && (
-                                            <div style={{ padding: '6px 12px', borderTop: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
-                                              <button className="btn primary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => window.location.href = `/scoreboard/${m.id}`}>▶ Start scoring</button>
-                                            </div>
-                                          )}
-                                          {m.status === 'completed' && (
-                                            <div style={{ padding: '5px 12px', borderTop: '1px solid var(--border)', background: 'var(--success-bg)', fontSize: 11, color: 'var(--success-text)', fontWeight: 700, textAlign: 'center' }}>✓ Completed</div>
-                                          )}
-                                          {m.status === 'bye' && (
-                                            <div style={{ padding: '5px 12px', borderTop: '1px solid var(--border)', fontSize: 11, color: 'var(--text-hint)', textAlign: 'center' }}>BYE</div>
-                                          )}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
+                        <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 16, letterSpacing: '.06em' }}>{tournament.name} · {formatLabel[tournament.format]}</div>
+                        <div style={{ overflowX: 'auto', overflowY: 'visible', paddingBottom: 16 }}>
+                          <svg width={svgWidth} height={svgHeight} style={{ fontFamily: "'Barlow Condensed',sans-serif", overflow: 'visible' }}>
+                            {/* Round labels */}
+                            {rounds.map((round, ri) => (
+                              <text key={round} x={colX(ri) + BOX_W / 2} y={18} textAnchor="middle" fontSize={10} fontWeight={700} fill="var(--text-hint)" letterSpacing="0.08em" style={{ textTransform: 'uppercase' }}>
+                                {ri === rounds.length - 1 ? 'FINAL' : `ROUND ${round}`}
+                              </text>
+                            ))}
+                            <text x={colX(totalRounds - 1) + BOX_W + COL_GAP / 2 + CHAMP_W / 2 + 4} y={18} textAnchor="middle" fontSize={10} fontWeight={700} fill="var(--accent)" letterSpacing="0.08em">CHAMPION</text>
+
+                            {/* Connector lines */}
+                            {lines.map((l, i) => (
+                              <g key={i}>
+                                <line x1={l.x1} y1={l.y1 + 28} x2={l.x2} y2={l.y2 + 28} stroke="var(--border)" strokeWidth={2}/>
+                                <line x1={l.x2} y1={l.y2 + 28} x2={l.x3} y2={l.y3 + 28} stroke="var(--border)" strokeWidth={2}/>
+                                <line x1={l.x3} y1={l.y3 + 28} x2={l.x4} y2={l.y4 + 28} stroke="var(--border)" strokeWidth={2}/>
+                              </g>
+                            ))}
+
+                            {/* Champion connector line */}
+                            {finalMatch && (
+                              <line x1={colX(totalRounds-1)+BOX_W} y1={champY+28} x2={champX + CHAMP_W/2 + 4} y2={champY+28} stroke="var(--accent)" strokeWidth={2} strokeDasharray="4 3"/>
+                            )}
+
+                            {/* Champion box */}
+                            <rect x={champX + 4} y={champY + 28 - CHAMP_H/2} width={CHAMP_W} height={CHAMP_H} rx={8} fill="var(--accent)" />
+                            <text x={champX + 4 + CHAMP_W/2} y={champY + 28 + 5} textAnchor="middle" fontSize={12} fontWeight={800} fill="#fff" letterSpacing="0.06em">
+                              {finalMatch?.winner_id
+                                ? (finalMatch.player1_score > finalMatch.player2_score ? finalMatch.player1_name : finalMatch.player2_name) || 'CHAMPION'
+                                : 'CHAMPION'}
+                            </text>
+
+                            {/* Match boxes */}
+                            {winnerMatches.map(m => {
+                              const x = colX(rounds.indexOf(m.round));
+                              const y = (matchY[m.id] || 0) + 28;
+                              const isWinner1 = m.status === 'completed' && m.player1_score > m.player2_score;
+                              const isWinner2 = m.status === 'completed' && m.player2_score > m.player1_score;
+                              const borderColor = m.status === 'completed' ? '#4ade80' : m.status === 'ongoing' ? 'var(--accent)' : 'var(--border)';
+                              return (
+                                <g key={m.id} style={{ cursor: m.status !== 'completed' && m.status !== 'bye' && m.player1_name && m.player2_name ? 'pointer' : 'default' }}
+                                  onClick={() => { if (m.status !== 'completed' && m.status !== 'bye' && m.player1_name && m.player2_name) window.location.href = `/scoreboard/${m.id}`; }}>
+                                  {/* Box shadow */}
+                                  <rect x={x+2} y={y-BOX_H/2+2} width={BOX_W} height={BOX_H} rx={8} fill="rgba(0,0,0,.15)"/>
+                                  {/* Main box */}
+                                  <rect x={x} y={y-BOX_H/2} width={BOX_W} height={BOX_H} rx={8} fill="var(--card-bg)" stroke={borderColor} strokeWidth={1.5}/>
+                                  {/* Divider */}
+                                  <line x1={x} y1={y} x2={x+BOX_W} y2={y} stroke="var(--border)" strokeWidth={1}/>
+                                  {/* Winner highlight */}
+                                  {isWinner1 && <rect x={x} y={y-BOX_H/2} width={BOX_W} height={BOX_H/2} rx={8} fill="rgba(74,222,128,.12)"/>}
+                                  {isWinner2 && <rect x={x} y={y} width={BOX_W} height={BOX_H/2} rx={8} fill="rgba(74,222,128,.12)"/>}
+                                  {/* Player 1 */}
+                                  <text x={x+10} y={y-9} fontSize={12} fontWeight={isWinner1 ? 800 : 500} fill={m.player1_name ? (isWinner1 ? '#4ade80' : 'var(--text-primary)') : 'var(--text-hint)'} clipPath={`url(#clip-${m.id}-1)`}>{m.player1_name || 'TBD'}</text>
+                                  <text x={x+BOX_W-8} y={y-9} fontSize={12} fontWeight={800} fill="var(--accent)" textAnchor="end">{m.status !== 'pending' ? m.player1_score : ''}</text>
+                                  {/* Player 2 */}
+                                  <text x={x+10} y={y+17} fontSize={12} fontWeight={isWinner2 ? 800 : 500} fill={m.player2_name ? (isWinner2 ? '#4ade80' : 'var(--text-primary)') : 'var(--text-hint)'} clipPath={`url(#clip-${m.id}-2)`}>{m.player2_name || 'TBD'}</text>
+                                  <text x={x+BOX_W-8} y={y+17} fontSize={12} fontWeight={800} fill="var(--accent)" textAnchor="end">{m.status !== 'pending' ? m.player2_score : ''}</text>
+                                  {/* Clip paths for long names */}
+                                  <defs>
+                                    <clipPath id={`clip-${m.id}-1`}><rect x={x+10} y={y-BOX_H/2} width={BOX_W-40} height={BOX_H/2}/></clipPath>
+                                    <clipPath id={`clip-${m.id}-2`}><rect x={x+10} y={y} width={BOX_W-40} height={BOX_H/2}/></clipPath>
+                                  </defs>
+                                  {/* ▶ play icon for active matches */}
+                                  {m.status !== 'completed' && m.status !== 'bye' && m.player1_name && m.player2_name && (
+                                    <text x={x+BOX_W/2} y={y+36} textAnchor="middle" fontSize={9} fontWeight={700} fill="var(--accent)" letterSpacing="0.06em">▶ TAP TO SCORE</text>
+                                  )}
+                                  {m.status === 'completed' && (
+                                    <text x={x+BOX_W/2} y={y+36} textAnchor="middle" fontSize={9} fontWeight={700} fill="#4ade80" letterSpacing="0.06em">✓ DONE</text>
+                                  )}
+                                </g>
+                              );
+                            })}
+                          </svg>
+                        </div>
+
+                        {/* Losers bracket for double elim — keep as table below */}
+                        {tournament.format === 'double_elim' && tMatches.filter(m => m.bracket === 'losers').length > 0 && (
+                          <div style={{ marginTop: 32 }}>
+                            <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text-muted)', marginBottom: 12 }}>Losers Bracket</div>
+                            <div className="table-wrap">
+                              <table className="tbl">
+                                <thead><tr><th>Round</th><th>Player 1</th><th>Score</th><th>Player 2</th><th>Status</th><th>Action</th></tr></thead>
+                                <tbody>
+                                  {tMatches.filter(m => m.bracket === 'losers').map(m => (
+                                    <tr key={m.id}>
+                                      <td style={{ color: 'var(--text-muted)', fontFamily: "'Barlow',sans-serif" }}>R{m.round}</td>
+                                      <td style={{ fontWeight: 600 }}>{m.player1_name || 'TBD'}</td>
+                                      <td style={{ fontWeight: 800, color: 'var(--accent)' }}>{m.player1_score} – {m.player2_score}</td>
+                                      <td style={{ fontWeight: 600 }}>{m.player2_name || 'TBD'}</td>
+                                      <td><span className={`badge badge-${m.status}`}>{m.status}</span></td>
+                                      <td>{m.status !== 'completed' && m.status !== 'bye' && m.player1_name && m.player2_name && <button className="btn primary" onClick={() => window.location.href = `/scoreboard/${m.id}`}>▶ Score</button>}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
                             </div>
-                          );
-                        })}
+                          </div>
+                        )}
                       </div>
                     );
                   })()}
