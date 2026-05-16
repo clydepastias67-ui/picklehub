@@ -183,7 +183,7 @@ export default function CoachingPage() {
       `}</style>
 
       {/* NAV */}
-      <Navbar activeLink="/courts" />
+      <Navbar activeLink="/coaching" />
 
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px' }}>
 
