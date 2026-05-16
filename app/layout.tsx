@@ -29,7 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                const theme = localStorage.getItem('pickelhub_theme') || 'dark';
+                const theme = localStorage.getItem('picklehub_theme') || 'dark';
                 document.documentElement.setAttribute('data-theme', theme);
               } catch(e) {}
             `,
