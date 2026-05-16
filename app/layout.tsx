@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/lib/ThemeProvider';
 export const metadata: Metadata = {
   title: 'PickleHub — Book Courts, Play More',
   description: 'The all-in-one pickleball hub. Book courts, hire coaches, rent gear, order food, and join tournaments.',
+  verification: { google: '<meta name="google-site-verification" content="mE6Q-MKjs6Z2ayDJ7y8OX8fqvXTjK3VEBypDx2PL7E8" />' },
 };
 
 export const viewport: Viewport = {
