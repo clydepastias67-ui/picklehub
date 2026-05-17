@@ -24,6 +24,7 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userEmail, setUserEmail]     = useState('');
   const [userName, setUserName]       = useState('');
+  const [isAdmin, setIsAdmin]         = useState(false);
 
   // ── DATA ──
   const [bookings, setBookings]       = useState<Booking[]>([]);
@@ -40,11 +41,14 @@ export default function Dashboard() {
       setUserEmail(user.email || '');
       setUserName(user.user_metadata?.full_name || user.email?.split('@')[0] || 'Player');
 
-      const [{ data:b }, { data:s }, { data:t }] = await Promise.all([
+      const [{ data:b }, { data:s }, { data:t }, { data:adminData }] = await Promise.all([
         supabase.from('bookings').select('*,courts(name,type)').eq('user_id', user.id).order('start_time', { ascending:false }),
         supabase.from('coaching_sessions').select('*,coaches(name,skill_level)').eq('user_id', user.id).order('session_time', { ascending:false }),
         supabase.from('tournament_registrations').select('*,tournaments(name,date,status,format)').eq('user_id', user.id).order('created_at', { ascending:false }),
+        supabase.from('admins').select('email').eq('email', user.email).single(),
       ]);
+
+      if (adminData) setIsAdmin(true);
 
       setBookings(b || []);
       setSessions(s || []);
@@ -157,6 +161,11 @@ export default function Dashboard() {
 
         <div style={{ padding:'12px 16px', borderTop:'1px solid var(--border)', display:'flex', flexDirection:'column', gap:8, flexShrink:0 }}>
           <ThemeToggle />
+          {isAdmin && (
+            <a href="/admin" style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'8px', borderRadius:8, border:'1px solid var(--accent-border)', background:'var(--accent-bg)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:12, fontWeight:700, color:'var(--accent)', textDecoration:'none', textTransform:'uppercase', letterSpacing:'0.04em', transition:'all .2s' }}>
+              🔐 Admin panel
+            </a>
+          )}
           <button className="signout-btn" onClick={handleSignOut}>Sign out</button>
         </div>
       </div>
