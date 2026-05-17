@@ -16,7 +16,7 @@ export default function AuthPage() {
   const [rememberMe, setRememberMe] = useState(false);
 
   useEffect(() => {
-    const savedEmail = localStorage.getItem('pickelhub_email');
+    const savedEmail = localStorage.getItem('picklehub_email');
     if (savedEmail) { setEmail(savedEmail); setRememberMe(true); }
   }, []);
 
@@ -25,8 +25,8 @@ export default function AuthPage() {
     setLoading(true); setError('');
     try {
       const supabase = createClient();
-      if (rememberMe) localStorage.setItem('pickelhub_email', email);
-      else localStorage.removeItem('pickelhub_email');
+      if (rememberMe) localStorage.setItem('picklehub_email', email);
+      else localStorage.removeItem('picklehub_email');
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       window.location.href = '/dashboard';

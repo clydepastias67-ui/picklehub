@@ -157,6 +157,10 @@ export default function Dashboard() {
               <span style={{ fontSize:14 }}>{tab.icon}</span>{tab.label}
             </div>
           ))}
+          <div style={{ padding:'8px 16px 4px', fontSize:10, color:'var(--text-hint)', letterSpacing:'0.1em', textTransform:'uppercase', fontFamily:"'Barlow',sans-serif", marginTop:8 }}>Account</div>
+          <a href="/profile" className="dash-nav-item" style={{ textDecoration:'none', display:'flex' }}>
+            <span style={{ fontSize:14 }}>⚙️</span>Profile & settings
+          </a>
         </nav>
 
         <div style={{ padding:'12px 16px', borderTop:'1px solid var(--border)', display:'flex', flexDirection:'column', gap:8, flexShrink:0 }}>
