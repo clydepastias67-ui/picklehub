@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { ThemeToggle } from '@/lib/ThemeToggle';
@@ -259,7 +260,7 @@ export default function CourtsPage() {
                 <div key={court.id} className={`court-card ${selectedCourt?.id===court.id?'selected':''}`} style={{animationDelay:`${i*0.08}s`}} onClick={()=>{setSelectedCourt(court);setSelectedSlot(null);}}>
                   <div className="court-img">
                     {court.image_url ? (
-                      <img src={court.image_url} alt={court.name} style={{width:'100%',height:'100%',objectFit:'cover',position:'absolute',top:0,left:0}} />
+                      <Image src={court.image_url} alt={court.name} fill sizes="(max-width: 768px) 100vw, 400px" style={{ objectFit:'cover' }} />
                     ) : (
                       <div className="court-img-inner"><div className="court-net"/><div className="court-line"/></div>
                     )}

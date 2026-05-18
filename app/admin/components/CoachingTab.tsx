@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import type { Coach } from './types';
 
@@ -122,8 +123,11 @@ export default function CoachingTab({ toast }: { toast: (msg: string) => void })
               : coaches.map(coach => (
                 <tr key={coach.id}>
                   <td>
-                    <div style={{width:40,height:40,borderRadius:'50%',overflow:'hidden',background:'var(--bg-hover)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                      {coach.image_url ? <img src={coach.image_url} alt={coach.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/> : <span style={{fontSize:18}}>👤</span>}
+                    <div style={{width:40,height:40,borderRadius:'50%',overflow:'hidden',background:'var(--bg-hover)',display:'flex',alignItems:'center',justifyContent:'center',position:'relative'}}>
+                      {coach.image_url
+                        ? <Image src={coach.image_url} alt={coach.name} fill sizes="40px" style={{ objectFit:'cover', borderRadius:'50%' }} />
+                        : <span style={{fontSize:18}}>👤</span>
+                      }
                     </div>
                   </td>
                   <td style={{fontWeight:600}}>{coach.name}</td>

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import type { Product } from './types';
 
@@ -128,8 +129,11 @@ export default function ShopTab({ toast }: { toast: (msg: string) => void }) {
                   return (
                     <tr key={p.id}>
                       <td>
-                        <div style={{width:48,height:36,borderRadius:6,overflow:'hidden',background:'var(--bg-hover)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                          {p.image_url ? <img src={p.image_url} alt={p.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/> : <span style={{fontSize:18}}>🛍</span>}
+                        <div style={{width:48,height:36,borderRadius:6,overflow:'hidden',background:'var(--bg-hover)',display:'flex',alignItems:'center',justifyContent:'center',position:'relative'}}>
+                          {p.image_url
+                            ? <Image src={p.image_url} alt={p.name} fill sizes="48px" style={{ objectFit:'cover' }} />
+                            : <span style={{fontSize:18}}>🛍</span>
+                          }
                         </div>
                       </td>
                       <td style={{fontWeight:600}}>{p.name}</td>

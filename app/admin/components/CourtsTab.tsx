@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import type { Court } from './types';
 
@@ -120,8 +121,11 @@ export default function CourtsTab({ toast }: { toast: (msg: string) => void }) {
               : courts.map(court => (
                 <tr key={court.id}>
                   <td>
-                    <div style={{width:48,height:36,borderRadius:6,overflow:'hidden',background:'var(--bg-hover)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                      {court.image_url ? <img src={court.image_url} alt={court.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/> : <span style={{fontSize:18}}>🏓</span>}
+                    <div style={{width:48,height:36,borderRadius:6,overflow:'hidden',background:'var(--bg-hover)',display:'flex',alignItems:'center',justifyContent:'center',position:'relative'}}>
+                      {court.image_url
+                        ? <Image src={court.image_url} alt={court.name} fill sizes="48px" style={{ objectFit:'cover' }} />
+                        : <span style={{fontSize:18}}>🏓</span>
+                      }
                     </div>
                   </td>
                   <td style={{fontWeight:600}}>{court.name}</td>

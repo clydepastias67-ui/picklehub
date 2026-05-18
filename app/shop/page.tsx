@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { ThemeToggle } from '@/lib/ThemeToggle';
 import Navbar from '@/lib/Navbar';
@@ -294,7 +295,7 @@ export default function ShopPage() {
                       {/* Image */}
                       <div className="product-img">
                         {product.image_url ? (
-                          <img src={product.image_url} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} />
+                          <Image src={product.image_url} alt={product.name} fill sizes="(max-width: 768px) 100vw, 300px" style={{ objectFit:'cover' }} />
                         ) : (
                           <span>{categoryEmoji[product.category]}</span>
                         )}

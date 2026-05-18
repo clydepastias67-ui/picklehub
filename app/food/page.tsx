@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { ThemeToggle } from '@/lib/ThemeToggle';
 import { redirectToPayment } from '@/lib/usePayMongo';
@@ -179,7 +180,7 @@ export default function FoodPage() {
         .menu-card{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:all .25s;animation:fadeUp .5s ease both;}
         .menu-card:hover{border-color:var(--accent);transform:translateY(-2px);}
 
-        .menu-img{height:100px;display:flex;align-items:center;justify-content:center;font-size:40px;background:var(--bg-hover);}
+        .menu-img{height:100px;display:flex;align-items:center;justify-content:center;font-size:40px;background:var(--bg-hover);position:relative;overflow:hidden;}
         .menu-body{padding:14px;}
         .menu-name{font-size:15px;font-weight:700;margin-bottom:4px;}
         .menu-desc{font-family:'Barlow',sans-serif;font-size:12px;color:var(--text-muted);margin-bottom:10px;line-height:1.4;}
@@ -290,7 +291,7 @@ export default function FoodPage() {
                     <div key={item.id} className="menu-card" style={{ animationDelay: `${i * 0.06}s` }}>
                       <div className="menu-img">
                         {item.image_url ? (
-                          <img src={item.image_url} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <Image src={item.image_url} alt={item.name} fill sizes="(max-width: 768px) 100vw, 280px" style={{ objectFit:'cover' }} />
                         ) : (
                           <span>{categoryEmoji[item.category] || '🍽️'}</span>
                         )}

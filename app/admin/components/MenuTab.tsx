@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import type { MenuItem } from './types';
 
@@ -133,8 +134,11 @@ export default function MenuTab({ toast }: { toast: (msg: string) => void }) {
                   return (
                     <tr key={item.id}>
                       <td>
-                        <div style={{width:48,height:36,borderRadius:6,overflow:'hidden',background:'var(--bg-hover)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                          {item.image_url ? <img src={item.image_url} alt={item.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/> : <span style={{fontSize:18}}>🍱</span>}
+                        <div style={{width:48,height:36,borderRadius:6,overflow:'hidden',background:'var(--bg-hover)',display:'flex',alignItems:'center',justifyContent:'center',position:'relative'}}>
+                          {item.image_url
+                            ? <Image src={item.image_url} alt={item.name} fill sizes="48px" style={{ objectFit:'cover' }} />
+                            : <span style={{fontSize:18}}>🍱</span>
+                          }
                         </div>
                       </td>
                       <td style={{fontWeight:600}}>{item.name}</td>

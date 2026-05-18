@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { ThemeToggle } from '@/lib/ThemeToggle';
 import { redirectToPayment } from '@/lib/usePayMongo';
@@ -168,7 +169,7 @@ export default function CoachingPage() {
         .coach-card:hover{border-color:var(--accent);transform:translateY(-4px);}
         .coach-card.selected{border-color:var(--accent);border-width:2px;}
 
-        .coach-avatar{width:64px;height:64px;border-radius:50%;background:var(--accent-bg);border:2px solid var(--accent-border);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:var(--accent);flex-shrink:0;}
+        .coach-avatar{width:64px;height:64px;border-radius:50%;background:var(--accent-bg);border:2px solid var(--accent-border);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:var(--accent);flex-shrink:0;position:relative;overflow:hidden;}
 
         .book-btn{width:100%;height:50px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;}
         .book-btn:hover:not(:disabled){background:var(--accent-hover);transform:translateY(-2px);}
@@ -216,7 +217,7 @@ export default function CoachingPage() {
                 <div style={{ padding: 20, display: 'flex', gap: 16, alignItems: 'flex-start' }}>
                   <div className="coach-avatar">
                     {coach.image_url
-                      ? <img src={coach.image_url} alt={coach.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                      ? <Image src={coach.image_url} alt={coach.name} fill sizes="64px" style={{ objectFit:'cover', borderRadius:'50%' }} />
                       : coach.name[0].toUpperCase()
                     }
                   </div>
