@@ -1,10 +1,45 @@
 import { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  const base = 'https://picklehub-sigma.vercel.app';
+  const now  = new Date();
+
   return [
     {
-      url: 'https://picklehub-sigma.vercel.app',
-      lastModified: new Date(),
+      url: base,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 1.0,
     },
-  ]
+    {
+      url: `${base}/courts`,
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.9,
+    },
+    {
+      url: `${base}/coaching`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    {
+      url: `${base}/tournaments`,
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.8,
+    },
+    {
+      url: `${base}/food`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.7,
+    },
+    {
+      url: `${base}/shop`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.7,
+    },
+  ];
 }
