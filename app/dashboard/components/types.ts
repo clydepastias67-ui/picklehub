@@ -19,6 +19,16 @@ export type TournamentMatch = {
   player1_score: number; player2_score: number; winner_id: string | null; status: string;
 };
 
+export type FoodOrder = {
+  id: string; status: string; total_price: number; delivery_type: string; created_at: string;
+  items: { id: string; name: string; qty: number; price: number }[];
+};
+
+export type ShopOrder = {
+  id: string; status: string; total_price: number; type: string; quantity: number; created_at: string;
+  products?: { name: string; category: string };
+};
+
 export type User = { id: string; email?: string; full_name?: string; };
 
 export const SHARED_STYLES = `

@@ -3,18 +3,20 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { ThemeToggle } from '@/lib/ThemeToggle';
-import OverviewTab    from './components/OverviewTab';
-import BookingsTab    from './components/BookingsTab';
-import CoachingTab    from './components/CoachingTab';
-import TournamentsTab from './components/TournamentsTab';
-import QuickLinksTab  from './components/QuickLinksTab';
-import type { Booking, CoachingSession, Tournament } from './components/types';
+import OverviewTab       from './components/OverviewTab';
+import BookingsTab       from './components/BookingsTab';
+import CoachingTab       from './components/CoachingTab';
+import TournamentsTab    from './components/TournamentsTab';
+import QuickLinksTab     from './components/QuickLinksTab';
+import OrderHistoryTab   from './components/OrderHistoryTab';
+import type { Booking, CoachingSession, Tournament, FoodOrder, ShopOrder } from './components/types';
 
 const TABS = [
   { id:'overview',    label:'Overview',    icon:'📊' },
   { id:'bookings',    label:'Bookings',    icon:'📅' },
   { id:'coaching',    label:'Coaching',    icon:'👤' },
   { id:'tournaments', label:'Tournaments', icon:'🏆' },
+  { id:'orders',      label:'Orders',      icon:'🧾' },
   { id:'links',       label:'Quick links', icon:'🔗' },
 ];
 
@@ -30,6 +32,8 @@ export default function Dashboard() {
   const [bookings, setBookings]       = useState<Booking[]>([]);
   const [sessions, setSessions]       = useState<CoachingSession[]>([]);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [foodOrders, setFoodOrders]   = useState<FoodOrder[]>([]);
+  const [shopOrders, setShopOrders]   = useState<ShopOrder[]>([]);
 
   const supabase = createClient();
 
@@ -41,11 +45,13 @@ export default function Dashboard() {
       setUserEmail(user.email || '');
       setUserName(user.user_metadata?.full_name || user.email?.split('@')[0] || 'Player');
 
-      const [{ data:b }, { data:s }, { data:t }, { data:adminData }] = await Promise.all([
+      const [{ data:b }, { data:s }, { data:t }, { data:adminData }, { data:f }, { data:so }] = await Promise.all([
         supabase.from('bookings').select('*,courts(name,type)').eq('user_id', user.id).order('start_time', { ascending:false }),
         supabase.from('coaching_sessions').select('*,coaches(name,skill_level)').eq('user_id', user.id).order('session_time', { ascending:false }),
         supabase.from('tournament_registrations').select('*,tournaments(name,date,status,format)').eq('user_id', user.id).order('created_at', { ascending:false }),
         supabase.from('admins').select('email').eq('email', user.email).single(),
+        supabase.from('food_orders').select('*').eq('user_id', user.id).order('created_at', { ascending:false }),
+        supabase.from('shop_orders').select('*,products(name,category)').eq('user_id', user.id).order('created_at', { ascending:false }),
       ]);
 
       if (adminData) setIsAdmin(true);
@@ -53,6 +59,8 @@ export default function Dashboard() {
       setBookings(b || []);
       setSessions(s || []);
       setTournaments(t || []);
+      setFoodOrders(f || []);
+      setShopOrders(so || []);
       setLoading(false);
     };
     init();
@@ -72,10 +80,11 @@ export default function Dashboard() {
 
   const renderTab = () => {
     switch (activeTab) {
-      case 'overview':    return <OverviewTab bookings={bookings} sessions={sessions} setActiveTab={setActiveTab} />;
+      case 'overview':    return <OverviewTab bookings={bookings} sessions={sessions} foodOrders={foodOrders} shopOrders={shopOrders} setActiveTab={setActiveTab} />;
       case 'bookings':    return <BookingsTab bookings={bookings} />;
       case 'coaching':    return <CoachingTab sessions={sessions} />;
       case 'tournaments': return <TournamentsTab tournaments={tournaments} />;
+      case 'orders':      return <OrderHistoryTab foodOrders={foodOrders} shopOrders={shopOrders} />;
       case 'links':       return <QuickLinksTab />;
       default:            return null;
     }

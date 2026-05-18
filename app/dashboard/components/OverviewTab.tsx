@@ -1,25 +1,29 @@
 'use client';
 
 import React from 'react';
-import type { Booking, CoachingSession } from './types';
+import type { Booking, CoachingSession, FoodOrder, ShopOrder } from './types';
 import { SHARED_STYLES, fmtDate, fmtTime } from './types';
 
 type Props = {
   bookings: Booking[];
   sessions: CoachingSession[];
+  foodOrders: FoodOrder[];
+  shopOrders: ShopOrder[];
   setActiveTab: (tab: string) => void;
 };
 
-export default function OverviewTab({ bookings, sessions, setActiveTab }: Props) {
-  const totalSpent       = bookings.filter(b => b.status === 'confirmed').reduce((s, b) => s + (b.total_price || 0), 0);
+export default function OverviewTab({ bookings, sessions, foodOrders, shopOrders, setActiveTab }: Props) {
+  const totalSpent       = bookings.filter(b => b.status === 'confirmed').reduce((s, b) => s + (b.total_price || 0), 0)
+                         + foodOrders.filter(o => o.status !== 'cancelled').reduce((s, o) => s + (o.total_price || 0), 0)
+                         + shopOrders.filter(o => o.status !== 'cancelled').reduce((s, o) => s + (o.total_price || 0), 0);
   const confirmedCount   = bookings.filter(b => b.status === 'confirmed').length;
   const upcomingCount    = bookings.filter(b => b.status === 'confirmed' && new Date(b.start_time) > new Date()).length;
 
   const stats = [
-    { label:'Total bookings', value: confirmedCount },
-    { label:'Upcoming',       value: upcomingCount },
-    { label:'Confirmed',      value: confirmedCount },
-    { label:'Total spent',    value: `₱${totalSpent.toLocaleString()}` },
+    { label:'Total bookings',  value: confirmedCount },
+    { label:'Upcoming',        value: upcomingCount },
+    { label:'Food orders',     value: foodOrders.filter(o => o.status !== 'cancelled').length },
+    { label:'Total spent',     value: `₱${totalSpent.toLocaleString()}` },
   ];
 
   return (
