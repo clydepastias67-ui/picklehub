@@ -119,7 +119,7 @@ export default function LandingPage() {
       <nav style={{ position:'sticky', top:0, zIndex:100, background:scrolled ? 'var(--nav-bg)' : 'transparent', backdropFilter:scrolled ? 'blur(12px)' : 'none', borderBottom:scrolled ? '1px solid var(--border)' : '1px solid transparent', transition:'all .3s', padding:'0 clamp(16px,4vw,48px)', height:'64px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
           <div style={{ width:10, height:10, background:'var(--accent)', borderRadius:'50%', animation:'pulse-dot 2s ease infinite' }} />
-          <span style={{ fontSize:20, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em' }}>PickleHub</span>
+          <span style={{ fontSize:20, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em' }}>Picklverse</span>
         </div>
         {/* Logo only on left, theme + hamburger on right */}
         <div style={{ display:'flex', gap:10, alignItems:'center' }}>
@@ -198,7 +198,7 @@ export default function LandingPage() {
         <div style={{ marginBottom:48 }}>
           <div className="section-tag">Everything you need</div>
           <h2 className="section-title">One hub.<br />All the action.</h2>
-          <p className="section-sub">From booking your first court to hosting a tournament — PickleHub has you covered.</p>
+          <p className="section-sub">From booking your first court to hosting a tournament — Picklverse has you covered.</p>
         </div>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))', gap:16 }}>
           {[
@@ -265,7 +265,7 @@ export default function LandingPage() {
       {/* CTA */}
       <div className="cta-section">
         <h2 className="cta-title">Ready to play?</h2>
-        <p className="cta-sub">{user ? "You're logged in — head to your dashboard or book a court now." : 'Join hundreds of players already booking through PickleHub.'}</p>
+        <p className="cta-sub">{user ? "You're logged in — head to your dashboard or book a court now." : 'Join hundreds of players already booking through Picklverse.'}</p>
         <div style={{ display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap' }}>
           {user ? (
             <><a href="/courts" className="btn-dark">Book a court</a><a href="/dashboard" className="btn-outline" style={{ borderColor:'rgba(255,255,255,.3)', color:'#fff' }}>Go to dashboard</a></>
@@ -277,13 +277,13 @@ export default function LandingPage() {
 
       {/* FOOTER */}
       <footer>
-        <div className="footer-logo"><div style={{ width:8, height:8, background:'var(--accent)', borderRadius:'50%' }} />PickleHub</div>
+        <div className="footer-logo"><div style={{ width:8, height:8, background:'var(--accent)', borderRadius:'50%' }} />Picklverse</div>
         <div className="footer-links">
           {['Courts','Coaching','Tournaments','Shop','Food & drinks','Admin'].map(l => (
             <a key={l} href={`/${l.toLowerCase().replace(' & ','-').replace(' ','-')}`} className="footer-link">{l}</a>
           ))}
         </div>
-        <div className="footer-copy">© 2026 PickleHub · Built with Next.js & Supabase · Payments by PayMongo</div>
+        <div className="footer-copy">© 2026 Picklverse · Built with Next.js & Supabase · Payments by PayMongo</div>
       </footer>
     </main>
   );

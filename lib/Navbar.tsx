@@ -150,7 +150,7 @@ export default function Navbar({ activeLink }: NavbarProps) {
       <nav className="navbar" style={{ position: 'sticky' }}>
         <a href="/" className="navbar-logo">
           <div className="navbar-logo-dot" />
-          <span className="navbar-logo-text">PickleHub</span>
+          <span className="navbar-logo-text">Picklverse</span>
         </a>
 
         {/* Desktop links */}

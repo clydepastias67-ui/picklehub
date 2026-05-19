@@ -31,7 +31,7 @@ export default function ShopPage() {
   const [cart, setCart] = useState<CartItem[]>(() => {
     // Restore cart from localStorage on mount (only store id/qty/type to keep it lean)
     try {
-      const saved = localStorage.getItem('picklehub_shop_cart');
+      const saved = localStorage.getItem('picklverse_shop_cart');
       return saved ? JSON.parse(saved) : [];
     } catch { return []; }
   });
@@ -45,7 +45,7 @@ export default function ShopPage() {
 
   // Persist cart to localStorage whenever it changes
   useEffect(() => {
-    try { localStorage.setItem('picklehub_shop_cart', JSON.stringify(cart)); } catch {}
+    try { localStorage.setItem('picklverse_shop_cart', JSON.stringify(cart)); } catch {}
   }, [cart]);
 
   useEffect(() => {
@@ -126,10 +126,10 @@ export default function ShopPage() {
       // We create one combined payment for the whole cart
       const firstOrderId = orderData[0]?.id;
       const itemNames = cart.map(c => `${c.product.name} (${c.type})`).join(', ');
-      try { localStorage.removeItem('picklehub_shop_cart'); } catch {}
+      try { localStorage.removeItem('picklverse_shop_cart'); } catch {}
       await redirectToPayment({
         amount: cartTotal,
-        description: `PickleHub Shop — ${itemNames}`,
+        description: `Picklverse Shop — ${itemNames}`,
         referenceId: firstOrderId,
         type: 'shop',
       });

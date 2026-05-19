@@ -128,7 +128,7 @@ export default function Dashboard() {
         <div style={{ padding:'18px 16px', borderBottom:'1px solid var(--border)', flexShrink:0 }}>
           <a href="/" style={{ display:'flex', alignItems:'center', gap:8, textDecoration:'none', color:'var(--text-primary)' }}>
             <div style={{ width:8, height:8, background:'var(--accent)', borderRadius:'50%' }} />
-            <span style={{ fontSize:17, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em' }}>PickleHub</span>
+            <span style={{ fontSize:17, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em' }}>Picklverse</span>
           </a>
           <div style={{ fontSize:10, color:'var(--accent)', letterSpacing:'0.1em', textTransform:'uppercase', marginTop:4, fontFamily:"'Barlow',sans-serif" }}>Player dashboard</div>
         </div>

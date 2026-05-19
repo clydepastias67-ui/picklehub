@@ -133,7 +133,7 @@ export default function TournamentsPage() {
       if (tournament.entry_fee > 0) {
         await redirectToPayment({
           amount: tournament.entry_fee,
-          description: `PickleHub Tournament - ${tournament.name}`,
+          description: `Picklverse Tournament - ${tournament.name}`,
           referenceId: regData.id,
           type: 'tournament',
         });

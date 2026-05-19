@@ -20,7 +20,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Load saved theme from localStorage on mount
-    const saved = localStorage.getItem('picklehub_theme') as Theme;
+    const saved = localStorage.getItem('picklverse_theme') as Theme;
     if (saved === 'light' || saved === 'dark') {
       setTheme(saved);
     }
@@ -30,7 +30,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!mounted) return;
     // Save preference to localStorage
-    localStorage.setItem('picklehub_theme', theme);
+    localStorage.setItem('picklverse_theme', theme);
     // Apply theme to document root
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme, mounted]);

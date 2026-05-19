@@ -33,7 +33,7 @@ export default function FoodPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [cart, setCart] = useState<CartItem[]>(() => {
     // Restore cart from localStorage on mount
-    try { const saved = localStorage.getItem('picklehub_food_cart'); return saved ? JSON.parse(saved) : []; } catch { return []; }
+    try { const saved = localStorage.getItem('picklverse_food_cart'); return saved ? JSON.parse(saved) : []; } catch { return []; }
   });
   const [activeCategory, setActiveCategory] = useState<'all' | 'snacks' | 'drinks' | 'meals'>('all');
   const [deliveryType, setDeliveryType] = useState<'court' | 'counter'>('court');
@@ -46,7 +46,7 @@ export default function FoodPage() {
 
   // Persist cart to localStorage whenever it changes
   useEffect(() => {
-    try { localStorage.setItem('picklehub_food_cart', JSON.stringify(cart)); } catch {}
+    try { localStorage.setItem('picklverse_food_cart', JSON.stringify(cart)); } catch {}
   }, [cart]);
 
   useEffect(() => {
@@ -114,10 +114,10 @@ export default function FoodPage() {
       }).select().single();
       if (error) throw error;
       // Redirect to PayMongo
-      try { localStorage.removeItem('picklehub_food_cart'); } catch {}
+      try { localStorage.removeItem('picklverse_food_cart'); } catch {}
       await redirectToPayment({
         amount: cartTotal,
-        description: `PickleHub Food Order - ${cart.map(c => c.item.name).join(', ')}`,
+        description: `Picklverse Food Order - ${cart.map(c => c.item.name).join(', ')}`,
         referenceId: orderData.id,
         type: 'food',
       });

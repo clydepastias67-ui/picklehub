@@ -71,7 +71,7 @@ export async function POST(req: Request) {
     const weekLabel = `${fmtDate(weekStart)} – ${fmtDate(weekEnd)}`;
 
     const adminEmails = admins.map(a => a.email);
-    const subject = `📊 PickleHub Weekly Report — ${weekLabel}`;
+    const subject = `📊 Picklverse Weekly Report — ${weekLabel}`;
 
     const statRow = (label: string, value: string, color = '#aaa') => `
       <tr>
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
       </tr>`;
 
     await resend.emails.send({
-      from: 'PickleHub <onboarding@resend.dev>',
+      from: 'Picklverse <onboarding@resend.dev>',
       to: adminEmails,
       subject,
       html: `
@@ -96,7 +96,7 @@ export async function POST(req: Request) {
                 <div>
                   <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
                     <div style="width:8px;height:8px;background:#639922;border-radius:50%;display:inline-block;"></div>
-                    <span style="color:#fff;font-size:18px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;">PickleHub</span>
+                    <span style="color:#fff;font-size:18px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;">Picklverse</span>
                   </div>
                   <div style="color:#639922;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;">Weekly Report</div>
                 </div>
@@ -180,7 +180,7 @@ export async function POST(req: Request) {
 
             <!-- Footer -->
             <div style="background:#111;border:1px solid #1e1e1e;border-top:none;border-radius:0 0 12px 12px;padding:16px 32px;text-align:center;">
-              <p style="color:#333;font-size:11px;margin:0;">© ${new Date().getFullYear()} PickleHub · Weekly automated report · Every Sunday evening</p>
+              <p style="color:#333;font-size:11px;margin:0;">© ${new Date().getFullYear()} Picklverse · Weekly automated report · Every Sunday evening</p>
             </div>
           </div>
         </body>

@@ -121,7 +121,7 @@ export default function CourtsPage() {
       // Redirect to PayMongo
       await redirectToPayment({
         amount: grandTotal,
-        description: `PickleHub Court Booking - ${selectedCourt.name} on ${selectedDate}`,
+        description: `Picklverse Court Booking - ${selectedCourt.name} on ${selectedDate}`,
         referenceId: bookingData.id,
         type: 'booking',
       });

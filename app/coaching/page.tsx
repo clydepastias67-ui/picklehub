@@ -104,7 +104,7 @@ export default function CoachingPage() {
       // Redirect to PayMongo
       await redirectToPayment({
         amount: selectedCoach.price_per_session,
-        description: `PickleHub Coaching Session - ${selectedCoach.name} on ${sessionDate}`,
+        description: `Picklverse Coaching Session - ${selectedCoach.name} on ${sessionDate}`,
         referenceId: sessionData.id,
         type: 'coaching',
       });

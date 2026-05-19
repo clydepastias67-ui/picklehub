@@ -16,7 +16,7 @@ export default function AuthPage() {
   const [rememberMe, setRememberMe] = useState(false);
 
   useEffect(() => {
-    const savedEmail = localStorage.getItem('picklehub_email');
+    const savedEmail = localStorage.getItem('picklverse_email');
     if (savedEmail) { setEmail(savedEmail); setRememberMe(true); }
   }, []);
 
@@ -25,8 +25,8 @@ export default function AuthPage() {
     setLoading(true); setError('');
     try {
       const supabase = createClient();
-      if (rememberMe) localStorage.setItem('picklehub_email', email);
-      else localStorage.removeItem('picklehub_email');
+      if (rememberMe) localStorage.setItem('picklverse_email', email);
+      else localStorage.removeItem('picklverse_email');
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       window.location.href = '/dashboard';
@@ -131,7 +131,7 @@ export default function AuthPage() {
 
       {/* NAV */}
       <nav style={{ position:'absolute', top:0, left:0, right:0, zIndex:10, padding:'20px 48px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-        <a href="/" className="auth-logo"><div className="logo-dot" />PickleHub</a>
+        <a href="/" className="auth-logo"><div className="logo-dot" />Picklverse</a>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
           <ThemeToggle />
           <a href="/" style={{ fontFamily:"'Barlow',sans-serif", fontSize:13, color:'var(--text-muted)', textDecoration:'none', display:'flex', alignItems:'center', gap:6 }}>
@@ -147,9 +147,9 @@ export default function AuthPage() {
           <div className="auth-left-bg" />
           <div className="circle" style={{ width:300, height:300, border:'1px solid var(--border)', top:'15%', right:-80 }} />
           <div className="circle" style={{ width:180, height:180, border:'1px solid var(--accent-border)', top:'20%', right:-40 }} />
-          <a href="/" className="auth-logo"><div className="logo-dot" />PickleHub</a>
+          <a href="/" className="auth-logo"><div className="logo-dot" />Picklverse</a>
           <div className="auth-headline">
-            <div className="auth-tag">Welcome to PickleHub</div>
+            <div className="auth-tag">Welcome to Picklverse</div>
             <div className="auth-big">Your game.<br /><span className="outline">Your courts.</span><br /><span className="accent">Your hub.</span></div>
             <div className="auth-features">
               {['Real-time court booking','GCash, Maya & card payments','Certified coaching sessions','Tournaments & leagues','Food delivered to your court'].map(f => (
@@ -172,7 +172,7 @@ export default function AuthPage() {
           <div className="form-wrap">
             <div className="form-header">
               <div className="form-title">{mode === 'login' ? 'Sign in' : 'Create account'}</div>
-              <div className="form-sub">{mode === 'login' ? 'Welcome back — enter your details to continue' : 'Join PickleHub and start playing today'}</div>
+              <div className="form-sub">{mode === 'login' ? 'Welcome back — enter your details to continue' : 'Join PicklVerse and start playing today'}</div>
             </div>
             <div className="mode-toggle">
               <button className={`mode-btn ${mode==='login'?'active':''}`} onClick={() => { setMode('login'); setError(''); setSuccess(''); }}>Sign in</button>

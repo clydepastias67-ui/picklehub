@@ -3,7 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import { ThemeProvider } from '@/lib/ThemeProvider';
 
 export const metadata: Metadata = {
-  title: 'PickleHub — Book Courts, Play More',
+  title: 'Picklverse — Book Courts, Play More',
   description: 'The all-in-one pickleball hub. Book courts, hire coaches, rent gear, order food, and join tournaments.',
   verification: { google: 'mE6Q-MKjs6Z2ayDJ7y8OX8fqvXTjK3VEBypDx2PL7E8' },
 };
@@ -29,7 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                const theme = localStorage.getItem('picklehub_theme') || 'dark';
+                const theme = localStorage.getItem('picklverse_theme') || 'dark';
                 document.documentElement.setAttribute('data-theme', theme);
               } catch(e) {}
             `,
