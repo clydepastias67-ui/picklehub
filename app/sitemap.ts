@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = 'https://picklverse.vercel.app';
+  const base = 'https://picklehub-1r6u.vercel.app/';
   const now  = new Date();
 
   return [
