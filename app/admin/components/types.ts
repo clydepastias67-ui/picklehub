@@ -1,4 +1,4 @@
-export type Booking = { id:string; status:string; total_price:number; created_at:string; start_time:string; courts?:{name:string}; };
+export type Booking = { id: string; user_id: string; status: string; total_price: number; created_at: string; start_time: string; end_time: string; courts?: { name: string; type?: string; };};
 export type Court = { id:string; name:string; type:string; price_per_hour:number; is_available:boolean; image_url?:string; description?:string; };
 export type Coach = { id:string; name:string; skill_level:string; price_per_session:number; is_available:boolean; bio?:string; image_url?:string; };
 export type MenuItem = { id:string; name:string; category:string; price:number; is_available:boolean; image_url?:string; description?:string; stock?:number; };
