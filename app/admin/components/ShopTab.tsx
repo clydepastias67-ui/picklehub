@@ -67,8 +67,10 @@ export default function ShopTab({ toast }: { toast: (msg: string) => void }) {
     if (!editItem) return;
     setSaving(true);
     const { id, ...rest } = editItem as { id:string; [key:string]:unknown };
-    if (isNew) await supabase.from('products').insert(rest);
-    else await supabase.from('products').update(rest).eq('id', id);
+    const { error } = isNew
+      ? await supabase.from('products').insert(rest)
+      : await supabase.from('products').update(rest).eq('id', id);
+    if (error) { toast('■ ' + error.message); setSaving(false); return; }
     toast(isNew ? 'Product added!' : 'Product saved!');
     await fetchProducts();
     setEditItem(null); setSaving(false);

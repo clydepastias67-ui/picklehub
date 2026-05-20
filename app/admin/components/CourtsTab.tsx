@@ -67,8 +67,10 @@ export default function CourtsTab({ toast }: { toast: (msg: string) => void }) {
     if (!editItem) return;
     setSaving(true);
     const { id, ...rest } = editItem as { id:string; [key:string]:unknown };
-    if (isNew) await supabase.from('courts').insert(rest);
-    else await supabase.from('courts').update(rest).eq('id', id);
+    const { error } = isNew
+      ? await supabase.from('courts').insert(rest)
+      : await supabase.from('courts').update(rest).eq('id', id);
+    if (error) { toast('■ ' + error.message); setSaving(false); return; }
     toast(isNew ? 'Court added!' : 'Court saved!');
     await fetchCourts();
     setEditItem(null); setSaving(false);
@@ -76,8 +78,18 @@ export default function CourtsTab({ toast }: { toast: (msg: string) => void }) {
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Remove "${name}"? This cannot be undone.`)) return;
+    const { data: activeBookings } = await supabase
+      .from('bookings')
+      .select('id')
+      .eq('court_id', id)
+      .eq('status', 'confirmed')
+      .gt('start_time', new Date().toISOString());
+    if (activeBookings && activeBookings.length > 0) {
+      toast(`■ Cannot delete — ${activeBookings.length} upcoming booking${activeBookings.length > 1 ? 's' : ''} on this court`);
+      return;
+    }
     await supabase.from('courts').delete().eq('id', id);
-    await fetchCourts(); toast('Removed!');
+    await fetchCourts(); toast('■ Removed!');
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {

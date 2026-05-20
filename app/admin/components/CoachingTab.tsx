@@ -74,8 +74,10 @@ export default function CoachingTab({ toast }: { toast: (msg: string) => void })
     if (!editItem) return;
     setSaving(true);
     const { id, ...rest } = editItem as { id:string; [key:string]:unknown };
-    if (isNew) await supabase.from('coaches').insert(rest);
-    else await supabase.from('coaches').update(rest).eq('id', id);
+    const { error } = isNew
+      ? await supabase.from('coaches').insert(rest)
+      : await supabase.from('coaches').update(rest).eq('id', id);
+    if (error) { toast('■ ' + error.message); setSaving(false); return; }
     toast(isNew ? 'Coach added!' : 'Coach saved!');
     await fetchCoaches();
     setEditItem(null); setSaving(false);

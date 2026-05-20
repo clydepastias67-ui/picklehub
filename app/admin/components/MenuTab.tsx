@@ -76,8 +76,10 @@ export default function MenuTab({ toast }: { toast: (msg: string) => void }) {
     if (!isNew && typeof rest.stock === 'number' && rest.stock > 0) {
       rest.is_available = true;
     }
-    if (isNew) await supabase.from('menu_items').insert(rest);
-    else await supabase.from('menu_items').update(rest).eq('id', id);
+    const { error } = isNew
+      ? await supabase.from('menu_items').insert(rest)
+      : await supabase.from('menu_items').update(rest).eq('id', id);
+    if (error) { toast('■ ' + error.message); setSaving(false); return; }
     toast(isNew ? 'Item added!' : 'Item saved!');
     await fetchMenu();
     setEditItem(null); setSaving(false);

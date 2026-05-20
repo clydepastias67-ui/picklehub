@@ -9,10 +9,6 @@ export async function POST(req: Request) {
     }
 
     const secretKey = process.env.PAYMONGO_SECRET_KEY;
-    console.log('[payment] key exists:', !!secretKey);
-    console.log('[payment] key prefix:', secretKey?.substring(0, 12));
-    console.log('[payment] amount:', amount);
-    console.log('[payment] app url:', process.env.NEXT_PUBLIC_APP_URL);
 
     if (!secretKey) {
       return NextResponse.json({ error: 'PayMongo key not configured' }, { status: 500 });
@@ -43,8 +39,6 @@ export async function POST(req: Request) {
     });
 
     const data = await response.json();
-    console.log('[payment] paymongo response status:', response.status);
-    console.log('[payment] paymongo response:', JSON.stringify(data));
 
     if (!response.ok) {
       console.error('PayMongo error:', data);

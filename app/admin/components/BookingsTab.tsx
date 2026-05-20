@@ -22,8 +22,34 @@ export default function BookingsTab({ toast }: { toast: (msg: string) => void })
 
   const handleBookingStatus = async (id: string, status: string) => {
     await supabase.from('bookings').update({ status }).eq('id', id);
+    if (status === 'cancelled') {
+      const booking = bookings.find(b => b.id === id);
+      if (booking) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('email, full_name')
+          .eq('id', booking.user_id)
+          .single();
+        if (profile?.email) {
+          await fetch('/api/email/booking-cancellation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-cron-secret': process.env.NEXT_PUBLIC_CRON_SECRET || '' },
+            body: JSON.stringify({
+              bookingId: booking.id,
+              userEmail: profile.email,
+              userName: profile.full_name,
+              courtName: booking.courts?.name,
+              courtType: booking.courts?.type,
+              startTime: booking.start_time,
+              endTime: booking.end_time,
+              totalPrice: booking.total_price,
+            }),
+          });
+        }
+      }
+    }
     await fetchBookings();
-    toast(`Booking ${status}`);
+    toast(`■ Booking ${status}`);
   };
 
   const fmtDate = (d:string) => new Date(d).toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'});

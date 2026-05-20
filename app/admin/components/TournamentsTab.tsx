@@ -57,8 +57,10 @@ export default function TournamentsTab({ toast }: { toast: (msg: string) => void
     if (!editItem) return;
     setSaving(true);
     const { id, ...rest } = editItem as { id:string; [key:string]:unknown };
-    if (isNew) await supabase.from('tournaments').insert(rest);
-    else await supabase.from('tournaments').update(rest).eq('id', id);
+    const { error } = isNew
+      ? await supabase.from('tournaments').insert(rest)
+      : await supabase.from('tournaments').update(rest).eq('id', id);
+    if (error) { toast('■ ' + error.message); setSaving(false); return; }
     toast(isNew ? 'Tournament added!' : 'Tournament saved!');
     await fetchTournaments();
     setEditItem(null); setSaving(false);
@@ -66,8 +68,21 @@ export default function TournamentsTab({ toast }: { toast: (msg: string) => void
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Remove "${name}"?`)) return;
+    const { data: registrations } = await supabase
+      .from('tournament_registrations')
+      .select('id, status')
+      .eq('tournament_id', id);
+    const confirmed = (registrations || []).filter(r => r.status === 'confirmed');
+    if (confirmed.length > 0) {
+      toast(`■ Cannot delete — ${confirmed.length} confirmed registration${confirmed.length > 1 ? 's' : ''} for this tournament`);
+      return;
+    }
+    // Cascade-delete any pending registrations first
+    if (registrations && registrations.length > 0) {
+      await supabase.from('tournament_registrations').delete().eq('tournament_id', id);
+    }
     await supabase.from('tournaments').delete().eq('id', id);
-    await fetchTournaments(); toast('Removed!');
+    await fetchTournaments(); toast('■ Removed!');
   };
 
   const fmtDate = (d:string) => new Date(d).toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'});
