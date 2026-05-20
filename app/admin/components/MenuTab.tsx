@@ -72,6 +72,10 @@ export default function MenuTab({ toast }: { toast: (msg: string) => void }) {
     if (!editItem) return;
     setSaving(true);
     const { id, ...rest } = editItem as { id:string; [key:string]:unknown };
+    // Auto re-enable item if admin sets stock above 0
+    if (!isNew && typeof rest.stock === 'number' && rest.stock > 0) {
+      rest.is_available = true;
+    }
     if (isNew) await supabase.from('menu_items').insert(rest);
     else await supabase.from('menu_items').update(rest).eq('id', id);
     toast(isNew ? 'Item added!' : 'Item saved!');

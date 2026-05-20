@@ -67,6 +67,10 @@ export default function ShopTab({ toast }: { toast: (msg: string) => void }) {
     if (!editItem) return;
     setSaving(true);
     const { id, ...rest } = editItem as { id:string; [key:string]:unknown };
+    // Auto re-enable product if admin sets stock above 0
+    if (!isNew && typeof rest.stock === 'number' && rest.stock > 0) {
+      rest.is_available = true;
+    }
     if (isNew) await supabase.from('products').insert(rest);
     else await supabase.from('products').update(rest).eq('id', id);
     toast(isNew ? 'Product added!' : 'Product saved!');

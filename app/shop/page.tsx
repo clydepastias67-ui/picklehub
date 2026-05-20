@@ -54,7 +54,7 @@ export default function ShopPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { window.location.href = '/login'; return; }
       setUser({ id: user.id, email: user.email });
-      const { data } = await supabase.from('products').select('*').order('category');
+      const { data } = await supabase.from('products').select('*').eq('is_available', true).order('category');
       setProducts(data || []);
       setLoading(false);
     };
@@ -63,7 +63,7 @@ export default function ShopPage() {
     // Realtime: update product stock live
     const supabaseRt = createClient();
     const refreshProducts = async () => {
-      const { data } = await supabaseRt.from('products').select('*').order('category');
+      const { data } = await supabaseRt.from('products').select('*').eq('is_available', true).order('category');
       if (data) setProducts(data);
     };
     const channel = supabaseRt.channel('shop-rt')
@@ -113,12 +113,13 @@ export default function ShopPage() {
       if (orderError) throw orderError;
 
       // 2 — Decrement stock for purchase items only (not rentals)
+      // Auto-disable the product if stock reaches 0
       const purchaseItems = cart.filter(c => c.type === 'purchase');
       await Promise.all(purchaseItems.map(async c => {
         const newStock = Math.max(0, c.product.stock - c.qty);
         await supabase
           .from('products')
-          .update({ stock: newStock })
+          .update({ stock: newStock, ...(newStock === 0 ? { is_available: false } : {}) })
           .eq('id', c.product.id);
       }));
 
