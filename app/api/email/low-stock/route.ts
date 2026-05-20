@@ -19,7 +19,7 @@ export async function POST(req: Request) {
       .select('id')
       .eq('type', 'low_stock')
       .eq('reference_id', productId)
-      .gte('sent_at', yesterday)
+      .gte('created_at', yesterday)
       .single();
 
     if (recentLog) {
