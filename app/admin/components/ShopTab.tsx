@@ -55,10 +55,12 @@ export default function ShopTab({ toast }: { toast: (msg: string) => void }) {
   const fileInputRef                    = useRef<HTMLInputElement>(null);
   const [uploadTarget, setUploadTarget] = useState<string|null>(null);
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [showArchived, setShowArchived] = useState(false);
 
   // ✅ FIX 1: Removed `const supabase = createClient();` from here
 
   const fetchProducts = async () => {
+    // Admin sees all products (active + archived)
     const { data } = await supabase.from('products').select('*').order('category').order('name');
     setProducts(data || []);
     setLoading(false);
@@ -79,23 +81,54 @@ export default function ShopTab({ toast }: { toast: (msg: string) => void }) {
     setEditItem(null); setSaving(false);
   };
 
-  // ✅ FIX 2: Now captures and shows the error from delete
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Remove "${name}"?`)) return;
-
-    // Temporary debug — open DevTools Console to see this
-    const { data: { user } } = await supabase.auth.getUser();
-    console.log('[ShopTab] deleting as:', user?.email ?? 'NOT LOGGED IN');
-
-    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (!confirm(`Archive "${name}"? Customers will no longer see it.`)) return;
+    const { error } = await supabase
+      .from('products')
+      .update({ is_active: false, deleted_at: new Date().toISOString() })
+      .eq('id', id);
     if (error) {
-      console.error('[ShopTab] delete error:', error);
+      console.error('[ShopTab] archive error:', error);
       toast('■ ' + error.message);
       return;
     }
-
     await fetchProducts();
-    toast('Removed!');
+    toast('Product archived.');
+  };
+
+  const handleRestore = async (id: string, name: string) => {
+    if (!confirm(`Restore "${name}"?`)) return;
+    const { error } = await supabase
+      .from('products')
+      .update({ is_active: true, deleted_at: null })
+      .eq('id', id);
+    if (error) {
+      console.error('[ShopTab] restore error:', error);
+      toast('■ ' + error.message);
+      return;
+    }
+    await fetchProducts();
+    toast('Product restored.');
+  };
+
+  const handlePermanentDelete = async (id: string) => {
+    if (!confirm('Permanently delete this item? This cannot be undone.')) return;
+    const { count } = await supabase
+      .from('shop_orders')
+      .select('*', { count: 'exact', head: true })
+      .eq('product_id', id);
+    if ((count ?? 0) > 0) {
+      toast('■ Cannot delete product with order history.');
+      return;
+    }
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (error) {
+      console.error(error);
+      toast('■ ' + error.message);
+      return;
+    }
+    await fetchProducts();
+    toast('Product permanently deleted.');
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -114,7 +147,11 @@ export default function ShopTab({ toast }: { toast: (msg: string) => void }) {
   };
 
   const categories = ['all', ...Array.from(new Set(products.map(p => p.category)))];
-  const filtered = products.filter(p => categoryFilter === 'all' || p.category === categoryFilter);
+  const filtered = products.filter(p => {
+    const matchesCategory = categoryFilter === 'all' || p.category === categoryFilter;
+    const matchesArchived = showArchived ? !p.is_active : p.is_active !== false;
+    return matchesCategory && matchesArchived;
+  });
 
   if (loading) return <div style={{padding:40,textAlign:'center',fontFamily:"'Barlow',sans-serif",color:'var(--text-muted)'}}>Loading shop...</div>;
 
@@ -125,7 +162,15 @@ export default function ShopTab({ toast }: { toast: (msg: string) => void }) {
 
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16,flexWrap:'wrap',gap:10}}>
         <h1 style={{fontSize:'clamp(20px,3vw,28px)',fontWeight:800,textTransform:'uppercase'}}>Shop</h1>
-        <button className="btn add" onClick={() => { setEditItem({...EMPTY_PRODUCT}); setIsNew(true); }}>+ Add product</button>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          <button
+            onClick={() => setShowArchived(v => !v)}
+            style={{fontSize:11,padding:'6px 14px',borderRadius:6,border:'1px solid var(--border)',background:showArchived?'var(--warning-bg)':'transparent',color:showArchived?'var(--warning-text)':'var(--text-muted)',cursor:'pointer',fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,letterSpacing:'.04em',textTransform:'uppercase',transition:'all .2s'}}
+          >
+            {showArchived ? '📦 Archived' : '📦 Show Archived'}
+          </button>
+          <button className="btn add" onClick={() => { setEditItem({...EMPTY_PRODUCT}); setIsNew(true); }}>+ Add product</button>
+        </div>
       </div>
 
       <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
@@ -167,7 +212,14 @@ export default function ShopTab({ toast }: { toast: (msg: string) => void }) {
                         <div className="actions">
                           <button className="btn" onClick={() => { setEditItem({...p}); setIsNew(false); }}>Edit</button>
                           <button className="img-btn" onClick={() => { setUploadTarget(p.id); setTimeout(() => fileInputRef.current?.click(), 100); }}>{uploadingId===p.id?'...':'📷'}</button>
-                          <button className="btn danger" onClick={() => handleDelete(p.id, p.name)}>Remove</button>
+                          {p.is_active !== false ? (
+                            <button className="btn danger" onClick={() => handleDelete(p.id, p.name)}>Archive</button>
+                          ) : (
+                            <>
+                              <button className="btn" onClick={() => handleRestore(p.id, p.name)}>Restore</button>
+                              <button className="btn danger" onClick={() => handlePermanentDelete(p.id)}>Delete</button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
