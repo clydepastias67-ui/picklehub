@@ -100,7 +100,7 @@ export default function OverviewTab({ toast }: { toast: (msg: string) => void })
         </div>
         <button className="btn primary" onClick={async () => {
           try {
-            const res = await fetch('/api/email/weekly-report',{method:'POST',headers:{'Content-Type':'application/json','x-cron-secret':process.env.NEXT_PUBLIC_CRON_SECRET||''}});
+            const res = await fetch('/api/email/send-weekly-report-admin',{method:'POST',headers:{'Content-Type':'application/json'}});
             const d = await res.json();
             toast(d.success ? `✅ Report sent to ${d.sent_to} admin${d.sent_to>1?'s':''}!` : `❌ ${d.error||'Failed'}`);
           } catch { toast('❌ Failed to send report'); }
