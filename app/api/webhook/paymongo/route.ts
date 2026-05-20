@@ -26,13 +26,101 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid remarks' }, { status: 400 });
     }
 
-    // Map payment type to Supabase table
+    // ── Shop: reference is a payment_reference shared across all cart orders ──
+    if (type === 'shop') {
+      const { data: orders, error: fetchError } = await supabaseAdmin
+        .from('shop_orders')
+        .select('id, product_id, quantity, type')
+        .eq('payment_reference', referenceId);
+
+      if (fetchError || !orders) {
+        console.error('Failed to fetch shop orders:', fetchError);
+        return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 });
+      }
+
+      // Confirm all orders in this cart
+      const { error: updateError } = await supabaseAdmin
+        .from('shop_orders')
+        .update({ status: 'confirmed' })
+        .eq('payment_reference', referenceId);
+
+      if (updateError) {
+        console.error('Failed to confirm shop orders:', updateError);
+        return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
+      }
+
+      // Decrement stock for purchase items and auto-disable if stock hits 0
+      const purchaseOrders = orders.filter(o => o.type === 'purchase');
+      await Promise.all(purchaseOrders.map(async order => {
+        const { data: product } = await supabaseAdmin
+          .from('products')
+          .select('stock')
+          .eq('id', order.product_id)
+          .single();
+
+        if (!product || product.stock == null) return;
+
+        const newStock = Math.max(0, product.stock - order.quantity);
+        await supabaseAdmin
+          .from('products')
+          .update({ stock: newStock, ...(newStock === 0 ? { is_available: false } : {}) })
+          .eq('id', order.product_id);
+      }));
+
+      console.log(`✅ Shop payment confirmed: ${orders.length} order(s) for ref ${referenceId}`);
+      return NextResponse.json({ received: true });
+    }
+
+    // ── Food: decrement menu item stock after confirmed ──
+    if (type === 'food') {
+      const { data: order, error: fetchError } = await supabaseAdmin
+        .from('food_orders')
+        .select('id, items')
+        .eq('id', referenceId)
+        .single();
+
+      if (fetchError || !order) {
+        console.error('Failed to fetch food order:', fetchError);
+        return NextResponse.json({ error: 'Failed to fetch order' }, { status: 500 });
+      }
+
+      const { error: updateError } = await supabaseAdmin
+        .from('food_orders')
+        .update({ status: 'confirmed' })
+        .eq('id', referenceId);
+
+      if (updateError) {
+        console.error('Failed to confirm food order:', updateError);
+        return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
+      }
+
+      // Decrement stock for each menu item and auto-disable if it hits 0
+      const items = order.items as { id: string; qty: number }[];
+      await Promise.all(items.map(async item => {
+        const { data: menuItem } = await supabaseAdmin
+          .from('menu_items')
+          .select('stock')
+          .eq('id', item.id)
+          .single();
+
+        if (!menuItem || menuItem.stock == null) return;
+
+        const newStock = Math.max(0, menuItem.stock - item.qty);
+        await supabaseAdmin
+          .from('menu_items')
+          .update({ stock: newStock, ...(newStock === 0 ? { is_available: false } : {}) })
+          .eq('id', item.id);
+      }));
+
+      console.log(`✅ Food payment confirmed: order ${referenceId}`);
+      return NextResponse.json({ received: true });
+    }
+
+    // ── All other types: simple status update ──
     const tableMap: Record<string, string> = {
       booking:    'bookings',
-      food:       'food_orders',
       coaching:   'coaching_sessions',
       tournament: 'tournament_registrations',
-      shop:       'shop_orders',
     };
 
     const table = tableMap[type];
@@ -41,7 +129,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unknown type' }, { status: 400 });
     }
 
-    // Update status to confirmed
     const { error } = await supabaseAdmin
       .from(table)
       .update({ status: 'confirmed' })

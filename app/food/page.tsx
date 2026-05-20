@@ -114,16 +114,7 @@ export default function FoodPage() {
         status: 'pending',
       }).select().single();
       if (error) throw error;
-      // Decrement stock for each item and auto-disable if it hits 0
-      const supabase2 = createClient();
-      await Promise.all(cart.map(async c => {
-        if (c.item.stock == null) return;
-        const newStock = Math.max(0, c.item.stock - c.qty);
-        await supabase2
-          .from('menu_items')
-          .update({ stock: newStock, ...(newStock === 0 ? { is_available: false } : {}) })
-          .eq('id', c.item.id);
-      }));
+      // Stock decrement + auto-disable happens in the webhook after payment confirmed
       // Redirect to PayMongo
       try { localStorage.removeItem('picklverse_food_cart'); } catch {}
       await redirectToPayment({

@@ -97,7 +97,10 @@ export default function ShopPage() {
     try {
       const supabase = createClient();
 
-      // 1 — Insert all orders and get their IDs back
+      // 1 — Generate a shared payment reference for the whole cart
+      const paymentReference = crypto.randomUUID();
+
+      // 2 — Insert all orders tagged with the shared payment reference
       const orders = cart.map(c => ({
         user_id: user.id,
         product_id: c.product.id,
@@ -105,33 +108,21 @@ export default function ShopPage() {
         quantity: c.qty,
         total_price: ((c.type === 'rental' ? c.product.rental_price : c.product.price) || 0) * c.qty,
         status: 'pending',
+        payment_reference: paymentReference,
       }));
-      const { data: orderData, error: orderError } = await supabase
+      const { error: orderError } = await supabase
         .from('shop_orders')
-        .insert(orders)
-        .select();
+        .insert(orders);
       if (orderError) throw orderError;
 
-      // 2 — Decrement stock for purchase items only (not rentals)
-      // Auto-disable the product if stock reaches 0
-      const purchaseItems = cart.filter(c => c.type === 'purchase');
-      await Promise.all(purchaseItems.map(async c => {
-        const newStock = Math.max(0, c.product.stock - c.qty);
-        await supabase
-          .from('products')
-          .update({ stock: newStock, ...(newStock === 0 ? { is_available: false } : {}) })
-          .eq('id', c.product.id);
-      }));
-
-      // 3 — Redirect to PayMongo using first order ID as reference
-      // We create one combined payment for the whole cart
-      const firstOrderId = orderData[0]?.id;
+      // 3 — Redirect to PayMongo using the shared reference
+      // Stock decrement + status update happens in the webhook after payment confirmed
       const itemNames = cart.map(c => `${c.product.name} (${c.type})`).join(', ');
       try { localStorage.removeItem('picklverse_shop_cart'); } catch {}
       await redirectToPayment({
         amount: cartTotal,
         description: `Picklverse Shop — ${itemNames}`,
-        referenceId: firstOrderId,
+        referenceId: paymentReference,
         type: 'shop',
       });
 
