@@ -37,7 +37,7 @@ export default function CoachingPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { window.location.href = '/login'; return; }
       setUser({ id: user.id, email: user.email });
-      const { data } = await supabase.from('coaches').select('*').eq('is_available', true).order('skill_level');
+      const { data } = await supabase.from('coaches').select('*').eq('is_available', true).eq('is_active', true).order('skill_level');
       setCoaches(data || []);
       setLoading(false);
     };
@@ -46,7 +46,7 @@ export default function CoachingPage() {
     // Realtime: update coach availability live
     const supabaseRt = createClient();
     const refreshCoaches = async () => {
-      const { data } = await supabaseRt.from('coaches').select('*').eq('is_available', true).order('skill_level');
+      const { data } = await supabaseRt.from('coaches').select('*').eq('is_available', true).eq('is_active', true).order('skill_level');
       if (data) setCoaches(data);
     };
     const channel = supabaseRt.channel('coaching-rt')

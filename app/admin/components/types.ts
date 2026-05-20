@@ -1,7 +1,9 @@
+import { IMAGES_MANIFEST } from "next/dist/shared/lib/constants";
+
 export type Booking = { id: string; user_id: string; status: string; total_price: number; created_at: string; start_time: string; end_time: string; courts?: { name: string; type?: string; };};
 export type Court = { id:string; name:string; type:string; price_per_hour:number; is_available:boolean; image_url?:string; description?:string; };
-export type Coach = { id:string; name:string; skill_level:string; price_per_session:number; is_available:boolean; bio?:string; image_url?:string; };
-export type MenuItem = { id:string; name:string; category:string; price:number; is_available:boolean; image_url?:string; description?:string; stock?:number; };
+export type Coach = { id:string; name:string; skill_level:string; price_per_session:number; is_available:boolean; bio?:string; image_url?:string; is_active?:boolean; };
+export type MenuItem = { id:string; name:string; category:string; price:number; is_available:boolean; image_url?:string; description?:string; stock?:number; is_active?:boolean; };
 export type Product = { id:string; name:string; category:string; price?:number; rental_price?:number; stock:number; low_stock_threshold?:number; is_for_sale:boolean; is_for_rent:boolean; image_url?:string; description?:string; is_active?:boolean; };
 export type Tournament = { id:string; name:string; date:string; max_players:number; entry_fee:number; status:string; format:string; description?:string; };
 export type Admin = { id:string; email:string; created_at:string; };

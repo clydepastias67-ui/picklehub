@@ -52,6 +52,7 @@ export default function MenuTab({ toast }: { toast: (msg: string) => void }) {
   const fileInputRef                  = useRef<HTMLInputElement>(null);
   const [uploadTarget, setUploadTarget] = useState<string|null>(null);
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [showArchived, setShowArchived] = useState(false);
 
   const supabase = createClient();
 
@@ -86,9 +87,30 @@ export default function MenuTab({ toast }: { toast: (msg: string) => void }) {
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Remove "${name}"?`)) return;
-    await supabase.from('menu_items').delete().eq('id', id);
-    await fetchMenu(); toast('Removed!');
+    if (!confirm(`Archive "${name}"? Customers will no longer see it.`)) return;
+    const { error } = await supabase
+      .from('menu_items')
+      .update({ is_active: false, deleted_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) { toast('■ ' + error.message); return; }
+    await fetchMenu(); toast('Item archived.');
+  };
+
+  const handleRestore = async (id: string, name: string) => {
+    if (!confirm(`Restore "${name}"?`)) return;
+    const { error } = await supabase
+      .from('menu_items')
+      .update({ is_active: true, deleted_at: null })
+      .eq('id', id);
+    if (error) { toast('■ ' + error.message); return; }
+    await fetchMenu(); toast('Item restored.');
+  };
+
+  const handlePermanentDelete = async (id: string) => {
+    if (!confirm('Permanently delete this item? This cannot be undone.')) return;
+    const { error } = await supabase.from('menu_items').delete().eq('id', id);
+    if (error) { toast('■ ' + error.message); return; }
+    await fetchMenu(); toast('Item permanently deleted.');
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -107,7 +129,11 @@ export default function MenuTab({ toast }: { toast: (msg: string) => void }) {
   };
 
   const categories = ['all', ...Array.from(new Set(menuItems.map(m => m.category)))];
-  const filtered = menuItems.filter(m => categoryFilter === 'all' || m.category === categoryFilter);
+  const filtered = menuItems.filter(m => {
+    const matchesCategory = categoryFilter === 'all' || m.category === categoryFilter;
+    const matchesArchived = showArchived ? !m.is_active : m.is_active !== false;
+    return matchesCategory && matchesArchived;
+  });
 
   if (loading) return <div style={{padding:40,textAlign:'center',fontFamily:"'Barlow',sans-serif",color:'var(--text-muted)'}}>Loading menu...</div>;
 
@@ -118,7 +144,15 @@ export default function MenuTab({ toast }: { toast: (msg: string) => void }) {
 
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16,flexWrap:'wrap',gap:10}}>
         <h1 style={{fontSize:'clamp(20px,3vw,28px)',fontWeight:800,textTransform:'uppercase'}}>Food & Drinks</h1>
-        <button className="btn add" onClick={() => { setEditItem({...EMPTY_MENU}); setIsNew(true); }}>+ Add item</button>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          <button
+            onClick={() => setShowArchived(v => !v)}
+            style={{fontSize:11,padding:'6px 14px',borderRadius:6,border:'1px solid var(--border)',background:showArchived?'var(--warning-bg)':'transparent',color:showArchived?'var(--warning-text)':'var(--text-muted)',cursor:'pointer',fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,letterSpacing:'.04em',textTransform:'uppercase',transition:'all .2s'}}
+          >
+            {showArchived ? '📦 Archived' : '📦 Show Archived'}
+          </button>
+          <button className="btn add" onClick={() => { setEditItem({...EMPTY_MENU}); setIsNew(true); }}>+ Add item</button>
+        </div>
       </div>
 
       <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
@@ -164,7 +198,14 @@ export default function MenuTab({ toast }: { toast: (msg: string) => void }) {
                         <div className="actions">
                           <button className="btn" onClick={() => { setEditItem({...item}); setIsNew(false); }}>Edit</button>
                           <button className="img-btn" onClick={() => { setUploadTarget(item.id); setTimeout(() => fileInputRef.current?.click(), 100); }}>{uploadingId===item.id?'...':'📷'}</button>
-                          <button className="btn danger" onClick={() => handleDelete(item.id, item.name)}>Remove</button>
+                          {item.is_active !== false ? (
+                            <button className="btn danger" onClick={() => handleDelete(item.id, item.name)}>Archive</button>
+                          ) : (
+                            <>
+                              <button className="btn" onClick={() => handleRestore(item.id, item.name)}>Restore</button>
+                              <button className="btn danger" onClick={() => handlePermanentDelete(item.id)}>Delete</button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>

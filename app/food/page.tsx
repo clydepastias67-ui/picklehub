@@ -58,7 +58,7 @@ export default function FoodPage() {
       setUser({ id: user.id, email: user.email });
 
       const [{ data: menuData }, { data: bookingsData }] = await Promise.all([
-        supabase.from('menu_items').select('*').eq('is_available', true).order('category'),
+        supabase.from('menu_items').select('*').eq('is_available', true).eq('is_active', true).order('category'),
         supabase.from('bookings').select('*, courts(name)').eq('user_id', user.id).eq('status', 'confirmed').gte('end_time', new Date().toISOString()).limit(5),
       ]);
 
@@ -72,7 +72,7 @@ export default function FoodPage() {
     // Realtime: update menu stock and active bookings live
     const supabaseRt = createClient();
     const refreshMenu = async () => {
-      const { data } = await supabaseRt.from('menu_items').select('*').eq('is_available', true);
+      const { data } = await supabaseRt.from('menu_items').select('*').eq('is_available', true).eq('is_active', true);
       if (data) setMenuItems(data);
     };
     const refreshBookings = async () => {

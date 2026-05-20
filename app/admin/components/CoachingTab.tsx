@@ -54,6 +54,7 @@ export default function CoachingTab({ toast }: { toast: (msg: string) => void })
   const [uploadingId, setUploadingId] = useState('');
   const fileInputRef                  = useRef<HTMLInputElement>(null);
   const [uploadTarget, setUploadTarget] = useState<string|null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const supabase = createClient();
 
@@ -84,9 +85,38 @@ export default function CoachingTab({ toast }: { toast: (msg: string) => void })
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Remove coach "${name}"?`)) return;
-    await supabase.from('coaches').delete().eq('id', id);
-    await fetchCoaches(); toast('Removed!');
+    if (!confirm(`Archive coach "${name}"? Customers will no longer see them.`)) return;
+    const { error } = await supabase
+      .from('coaches')
+      .update({ is_active: false, deleted_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) { toast('■ ' + error.message); return; }
+    await fetchCoaches(); toast('Coach archived.');
+  };
+
+  const handleRestore = async (id: string, name: string) => {
+    if (!confirm(`Restore coach "${name}"?`)) return;
+    const { error } = await supabase
+      .from('coaches')
+      .update({ is_active: true, deleted_at: null })
+      .eq('id', id);
+    if (error) { toast('■ ' + error.message); return; }
+    await fetchCoaches(); toast('Coach restored.');
+  };
+
+  const handlePermanentDelete = async (id: string) => {
+    if (!confirm('Permanently delete this coach? This cannot be undone.')) return;
+    const { count } = await supabase
+      .from('coaching_bookings')
+      .select('*', { count: 'exact', head: true })
+      .eq('coach_id', id);
+    if ((count ?? 0) > 0) {
+      toast('■ Cannot delete coach with booking history.');
+      return;
+    }
+    const { error } = await supabase.from('coaches').delete().eq('id', id);
+    if (error) { toast('■ ' + error.message); return; }
+    await fetchCoaches(); toast('Coach permanently deleted.');
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -106,6 +136,8 @@ export default function CoachingTab({ toast }: { toast: (msg: string) => void })
 
   if (loading) return <div style={{padding:40,textAlign:'center',fontFamily:"'Barlow',sans-serif",color:'var(--text-muted)'}}>Loading coaches...</div>;
 
+  const displayed = coaches.filter(c => showArchived ? !c.is_active : c.is_active !== false);
+
   return (
     <div>
       <style>{STYLES}</style>
@@ -113,16 +145,24 @@ export default function CoachingTab({ toast }: { toast: (msg: string) => void })
 
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
         <h1 style={{fontSize:'clamp(20px,3vw,28px)',fontWeight:800,textTransform:'uppercase'}}>Coaching</h1>
-        <button className="btn add" onClick={() => { setEditItem({...EMPTY_COACH}); setIsNew(true); }}>+ Add coach</button>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          <button
+            onClick={() => setShowArchived(v => !v)}
+            style={{fontSize:11,padding:'6px 14px',borderRadius:6,border:'1px solid var(--border)',background:showArchived?'var(--warning-bg)':'transparent',color:showArchived?'var(--warning-text)':'var(--text-muted)',cursor:'pointer',fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,letterSpacing:'.04em',textTransform:'uppercase',transition:'all .2s'}}
+          >
+            {showArchived ? '📦 Archived' : '📦 Show Archived'}
+          </button>
+          <button className="btn add" onClick={() => { setEditItem({...EMPTY_COACH}); setIsNew(true); }}>+ Add coach</button>
+        </div>
       </div>
 
       <div className="table-wrap">
         <table className="tbl">
           <thead><tr><th>Image</th><th>Name</th><th>Level</th><th>₱/session</th><th>Available</th><th>Actions</th></tr></thead>
           <tbody>
-            {coaches.length === 0
+            {displayed.length === 0
               ? <tr><td colSpan={6}><div className="empty">No coaches yet — add one!</div></td></tr>
-              : coaches.map(coach => (
+              : displayed.map(coach => (
                 <tr key={coach.id}>
                   <td>
                     <div style={{width:40,height:40,borderRadius:'50%',overflow:'hidden',background:'var(--bg-hover)',display:'flex',alignItems:'center',justifyContent:'center',position:'relative'}}>
@@ -144,7 +184,14 @@ export default function CoachingTab({ toast }: { toast: (msg: string) => void })
                     <div className="actions">
                       <button className="btn" onClick={() => { setEditItem({...coach}); setIsNew(false); }}>Edit</button>
                       <button className="img-btn" onClick={() => { setUploadTarget(coach.id); setTimeout(() => fileInputRef.current?.click(), 100); }}>{uploadingId===coach.id?'...':'📷'}</button>
-                      <button className="btn danger" onClick={() => handleDelete(coach.id, coach.name)}>Remove</button>
+                      {coach.is_active !== false ? (
+                        <button className="btn danger" onClick={() => handleDelete(coach.id, coach.name)}>Archive</button>
+                      ) : (
+                        <>
+                          <button className="btn" onClick={() => handleRestore(coach.id, coach.name)}>Restore</button>
+                          <button className="btn danger" onClick={() => handlePermanentDelete(coach.id)}>Delete</button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
