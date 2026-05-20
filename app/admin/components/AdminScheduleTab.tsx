@@ -18,7 +18,13 @@ function getWeekDates(offset: number): Date[] {
   return Array.from({length:7},(_,i) => { const d = new Date(sun); d.setDate(sun.getDate()+i); return d; });
 }
 
-function toDateStr(d: Date) { return d.toISOString().split('T')[0]; }
+function toDateStr(d: Date) {
+  // Use local date parts to avoid UTC offset shifting the date (important for PH UTC+8)
+  const yyyy = d.getFullYear();
+  const mm   = String(d.getMonth() + 1).padStart(2, '0');
+  const dd   = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
 
 export default function AdminScheduleTab({ toast }: { toast:(msg:string)=>void }) {
   const [courts, setCourts]         = useState<Court[]>([]);
@@ -53,12 +59,15 @@ export default function AdminScheduleTab({ toast }: { toast:(msg:string)=>void }
 
     const slots: BookingSlot[] = [];
     b?.forEach(bk => {
-      const s = new Date(bk.start_time);
-      const e = new Date(bk.end_time);
-      const date = toDateStr(s);
-      const existing = slots.find(sl => sl.court_id === bk.court_id && sl.date === date);
+      // Parse ISO string parts directly to avoid UTC-to-local timezone shift
+      const [datePart, timePart] = bk.start_time.split('T');
+      const [, endTimePart]      = bk.end_time.split('T');
+      const startHour = parseInt(timePart.slice(0, 2), 10);
+      const endHour   = parseInt(endTimePart.slice(0, 2), 10);
+      const date      = datePart;
+      const existing  = slots.find(sl => sl.court_id === bk.court_id && sl.date === date);
       const hours: number[] = [];
-      for (let h = s.getHours(); h < e.getHours(); h++) hours.push(h);
+      for (let h = startHour; h < endHour; h++) hours.push(h);
       if (existing) existing.hours.push(...hours);
       else slots.push({ court_id:bk.court_id, date, hours });
     });
@@ -79,7 +88,17 @@ export default function AdminScheduleTab({ toast }: { toast:(msg:string)=>void }
   const handleBlock = async () => {
     if (blockCourts.length === 0 || !blockModal) return;
     setBlocking(true);
-    const rows = blockCourts.map(cid => ({
+    // Filter out courts already blocked for this slot to prevent duplicate rows
+    const alreadyBlocked = blocked
+      .filter(bl => bl.date === blockModal.date && bl.hour === blockModal.hour)
+      .map(bl => bl.court_id);
+    const newCourts = blockCourts.filter(cid => !alreadyBlocked.includes(cid));
+    if (newCourts.length === 0) {
+      toast('These courts are already blocked for this slot');
+      setBlockModal(null); setBlockCourts([]); setBlockReason(''); setBlocking(false);
+      return;
+    }
+    const rows = newCourts.map(cid => ({
       court_id:cid, date:blockModal.date, hour:blockModal.hour, reason:blockReason||null,
     }));
     const { error } = await supabase.from('blocked_slots').insert(rows);
