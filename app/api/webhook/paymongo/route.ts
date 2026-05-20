@@ -139,6 +139,41 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
     }
 
+    // Send booking confirmation email to the player
+    if (type === 'booking') {
+      const { data: booking } = await supabaseAdmin
+        .from('bookings')
+        .select('id, start_time, end_time, total_price, courts(name, type), profiles(email, full_name)')
+        .eq('id', referenceId)
+        .single();
+
+      if (booking) {
+        const court   = booking.courts as unknown as { name: string; type: string } | null;
+        const profile = booking.profiles as unknown as { email: string; full_name: string } | null;
+
+        if (profile?.email && court?.name) {
+          const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pickelhub.vercel.app';
+          await fetch(`${baseUrl}/api/email/booking-confirmation`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-cron-secret': process.env.CRON_SECRET!,
+            },
+            body: JSON.stringify({
+              bookingId:  booking.id,
+              userEmail:  profile.email,
+              userName:   profile.full_name,
+              courtName:  court.name,
+              courtType:  court.type,
+              startTime:  booking.start_time,
+              endTime:    booking.end_time,
+              totalPrice: booking.total_price,
+            }),
+          }).catch(err => console.error('Failed to send confirmation email:', err));
+        }
+      }
+    }
+
     console.log(`✅ Payment confirmed: ${type} ${referenceId}`);
     return NextResponse.json({ received: true });
 
