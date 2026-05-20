@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createHmac } from 'crypto';
 
 // Use service role key for webhook — bypasses RLS since this is server-side
 const supabaseAdmin = createClient(
@@ -7,9 +8,49 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// Verify PayMongo webhook signature to reject forged requests
+function verifySignature(rawBody: string, signatureHeader: string | null): boolean {
+  if (!signatureHeader) return false;
+
+  const webhookSecret = process.env.PAYMONGO_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    console.error('PAYMONGO_WEBHOOK_SECRET is not set');
+    return false;
+  }
+
+  // PayMongo sends: "t=<timestamp>,te=<test_sig>,li=<live_sig>"
+  const parts: Record<string, string> = {};
+  signatureHeader.split(',').forEach(part => {
+    const [key, value] = part.split('=');
+    if (key && value) parts[key.trim()] = value.trim();
+  });
+
+  const timestamp = parts['t'];
+  // Use live signature in production, test signature in development
+  const signature = process.env.NODE_ENV === 'production' ? parts['li'] : parts['te'];
+
+  if (!timestamp || !signature) return false;
+
+  // PayMongo HMAC: HMAC-SHA256 of "<timestamp>.<rawBody>"
+  const expectedSig = createHmac('sha256', webhookSecret)
+    .update(`${timestamp}.${rawBody}`)
+    .digest('hex');
+
+  return expectedSig === signature;
+}
+
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    // Read raw body first — must happen before json() for signature verification
+    const rawBody = await req.text();
+    const signatureHeader = req.headers.get('paymongo-signature');
+
+    if (!verifySignature(rawBody, signatureHeader)) {
+      console.error('Webhook signature verification failed');
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    }
+
+    const body = JSON.parse(rawBody);
     const eventType = body.data?.attributes?.type;
     const paymentData = body.data?.attributes?.data;
 
@@ -38,7 +79,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 });
       }
 
-      // Confirm all orders in this cart
       const { error: updateError } = await supabaseAdmin
         .from('shop_orders')
         .update({ status: 'confirmed' })
@@ -49,22 +89,13 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
       }
 
-      // Decrement stock for purchase items and auto-disable if stock hits 0
+      // Decrement stock atomically via RPC — prevents race conditions on concurrent payments
       const purchaseOrders = orders.filter(o => o.type === 'purchase');
       await Promise.all(purchaseOrders.map(async order => {
-        const { data: product } = await supabaseAdmin
-          .from('products')
-          .select('stock')
-          .eq('id', order.product_id)
-          .single();
-
-        if (!product || product.stock == null) return;
-
-        const newStock = Math.max(0, product.stock - order.quantity);
-        await supabaseAdmin
-          .from('products')
-          .update({ stock: newStock })
-          .eq('id', order.product_id);
+        await supabaseAdmin.rpc('decrement_product_stock', {
+          item_id: order.product_id,
+          qty: order.quantity,
+        });
       }));
 
       console.log(`✅ Shop payment confirmed: ${orders.length} order(s) for ref ${referenceId}`);
@@ -94,22 +125,13 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
       }
 
-      // Decrement stock for each menu item and auto-disable if it hits 0
+      // Decrement stock atomically via RPC — prevents race conditions on concurrent payments
       const items = order.items as { id: string; qty: number }[];
       await Promise.all(items.map(async item => {
-        const { data: menuItem } = await supabaseAdmin
-          .from('menu_items')
-          .select('stock')
-          .eq('id', item.id)
-          .single();
-
-        if (!menuItem || menuItem.stock == null) return;
-
-        const newStock = Math.max(0, menuItem.stock - item.qty);
-        await supabaseAdmin
-          .from('menu_items')
-          .update({ stock: newStock })
-          .eq('id', item.id);
+        await supabaseAdmin.rpc('decrement_menu_stock', {
+          item_id: item.id,
+          qty: item.qty,
+        });
       }));
 
       console.log(`✅ Food payment confirmed: order ${referenceId}`);
