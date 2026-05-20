@@ -5,6 +5,9 @@ import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import type { Product } from './types';
 
+// ✅ FIX 1: Moved outside component so it's not recreated on every render
+const supabase = createClient();
+
 const EMPTY_PRODUCT = { name:'', category:'rackets', price:0, rental_price:0, stock:0, is_for_sale:true, is_for_rent:false, description:'' };
 
 const STYLES = `
@@ -43,17 +46,17 @@ const STYLES = `
 `;
 
 export default function ShopTab({ toast }: { toast: (msg: string) => void }) {
-  const [products, setProducts]       = useState<Product[]>([]);
-  const [loading, setLoading]         = useState(true);
-  const [editItem, setEditItem]       = useState<Record<string,unknown>|null>(null);
-  const [isNew, setIsNew]             = useState(false);
-  const [saving, setSaving]           = useState(false);
-  const [uploadingId, setUploadingId] = useState('');
-  const fileInputRef                  = useRef<HTMLInputElement>(null);
+  const [products, setProducts]         = useState<Product[]>([]);
+  const [loading, setLoading]           = useState(true);
+  const [editItem, setEditItem]         = useState<Record<string,unknown>|null>(null);
+  const [isNew, setIsNew]               = useState(false);
+  const [saving, setSaving]             = useState(false);
+  const [uploadingId, setUploadingId]   = useState('');
+  const fileInputRef                    = useRef<HTMLInputElement>(null);
   const [uploadTarget, setUploadTarget] = useState<string|null>(null);
   const [categoryFilter, setCategoryFilter] = useState('all');
 
-  const supabase = createClient();
+  // ✅ FIX 1: Removed `const supabase = createClient();` from here
 
   const fetchProducts = async () => {
     const { data } = await supabase.from('products').select('*').order('category').order('name');
@@ -76,10 +79,23 @@ export default function ShopTab({ toast }: { toast: (msg: string) => void }) {
     setEditItem(null); setSaving(false);
   };
 
+  // ✅ FIX 2: Now captures and shows the error from delete
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Remove "${name}"?`)) return;
-    await supabase.from('products').delete().eq('id', id);
-    await fetchProducts(); toast('Removed!');
+
+    // Temporary debug — open DevTools Console to see this
+    const { data: { user } } = await supabase.auth.getUser();
+    console.log('[ShopTab] deleting as:', user?.email ?? 'NOT LOGGED IN');
+
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (error) {
+      console.error('[ShopTab] delete error:', error);
+      toast('■ ' + error.message);
+      return;
+    }
+
+    await fetchProducts();
+    toast('Removed!');
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
