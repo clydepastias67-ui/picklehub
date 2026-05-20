@@ -54,7 +54,7 @@ export default function ShopPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { window.location.href = '/login'; return; }
       setUser({ id: user.id, email: user.email });
-      const { data } = await supabase.from('products').select('*').eq('is_available', true).order('category');
+      const { data } = await supabase.from('products').select('*').gt('stock', 0).order('category');
       setProducts(data || []);
       setLoading(false);
     };
@@ -63,7 +63,7 @@ export default function ShopPage() {
     // Realtime: update product stock live
     const supabaseRt = createClient();
     const refreshProducts = async () => {
-      const { data } = await supabaseRt.from('products').select('*').eq('is_available', true).order('category');
+      const { data } = await supabaseRt.from('products').select('*').gt('stock', 0).order('category');
       if (data) setProducts(data);
     };
     const channel = supabaseRt.channel('shop-rt')

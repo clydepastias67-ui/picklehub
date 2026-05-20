@@ -63,7 +63,7 @@ export async function POST(req: Request) {
         const newStock = Math.max(0, product.stock - order.quantity);
         await supabaseAdmin
           .from('products')
-          .update({ stock: newStock, ...(newStock === 0 ? { is_available: false } : {}) })
+          .update({ stock: newStock })
           .eq('id', order.product_id);
       }));
 
@@ -108,7 +108,7 @@ export async function POST(req: Request) {
         const newStock = Math.max(0, menuItem.stock - item.qty);
         await supabaseAdmin
           .from('menu_items')
-          .update({ stock: newStock, ...(newStock === 0 ? { is_available: false } : {}) })
+          .update({ stock: newStock })
           .eq('id', item.id);
       }));
 
