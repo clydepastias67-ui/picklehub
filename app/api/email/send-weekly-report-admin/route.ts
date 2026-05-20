@@ -27,6 +27,7 @@ export async function POST() {
       { data: coachingSessions },
       { data: tournaments },
       { data: lowStockProducts },
+      { data: menuItems },
       { data: admins },
     ] = await Promise.all([
       supabaseAdmin.from('bookings').select('*, courts(name)').gte('created_at', weekStartStr).lte('created_at', weekEndStr),
@@ -34,7 +35,8 @@ export async function POST() {
       supabaseAdmin.from('shop_orders').select('*, products(name)').gte('created_at', weekStartStr).lte('created_at', weekEndStr),
       supabaseAdmin.from('coaching_sessions').select('*').gte('created_at', weekStartStr).lte('created_at', weekEndStr),
       supabaseAdmin.from('tournament_registrations').select('*').gte('created_at', weekStartStr).lte('created_at', weekEndStr),
-      supabaseAdmin.from('products').select('name, stock, low_stock_threshold').lte('stock', 10),
+      supabaseAdmin.from('products').select('name, stock, low_stock_threshold'),
+      supabaseAdmin.from('menu_items').select('name, stock'),
       supabaseAdmin.from('admins').select('email'),
     ]);
 
@@ -66,6 +68,13 @@ export async function POST() {
         <td style="color:#555;font-size:12px;text-transform:uppercase;letter-spacing:0.06em;padding:10px 0;border-bottom:1px solid #222;">${label}</td>
         <td style="color:${color};font-size:16px;font-weight:800;padding:10px 0;border-bottom:1px solid #222;text-align:right;">${value}</td>
       </tr>`;
+
+    const lowStockFiltered = [
+      ...(lowStockProducts || []).filter(p => (p.stock ?? 0) <= (p.low_stock_threshold ?? 5))
+        .map(p => ({ name: p.name, stock: p.stock ?? 0 })),
+      ...(menuItems || []).filter(m => (m.stock ?? 99) <= 5)
+        .map(m => ({ name: `${m.name} (F&B)`, stock: m.stock ?? 0 })),
+    ];
 
     await resend.emails.send({
       from: 'Picklverse <onboarding@resend.dev>',
@@ -136,13 +145,13 @@ export async function POST() {
                 </div>
               `).join('')}
             </div>` : ''}
-            ${lowStockProducts && lowStockProducts.length > 0 ? `
+            ${lowStockFiltered.length > 0 ? `
             <div style="background:#161616;border:1px solid rgba(226,75,74,0.3);border-top:none;padding:28px 32px;">
               <div style="color:#f09595;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:16px;">⚠️ Low stock items</div>
-              ${lowStockProducts.map(p => `
+              ${lowStockFiltered.map(p => `
                 <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #222;">
                   <span style="color:#aaa;font-size:13px;">${p.name}</span>
-                  <span style="color:${(p.stock || 0) <= (p.low_stock_threshold || 5) ? '#f09595' : '#EF9F27'};font-size:13px;font-weight:700;">${p.stock} left</span>
+                  <span style="color:${p.stock === 0 ? '#f09595' : '#EF9F27'};font-size:13px;font-weight:700;">${p.stock === 0 ? 'Out of stock' : `${p.stock} left`}</span>
                 </div>
               `).join('')}
             </div>` : ''}
