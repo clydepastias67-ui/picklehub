@@ -17,9 +17,11 @@ const CoachingTab    = dynamic(() => import('./components/CoachingTab'));
 const TournamentsTab = dynamic(() => import('./components/TournamentsTab'));
 const AdminsTab      = dynamic(() => import('./components/AdminsTab'));
 const EmployeesTab   = dynamic(() => import('./components/EmployeesTab'));
+const ScheduleTab    = dynamic(() => import('./components/AdminScheduleTab'));
 
 const TABS = [
   { id:'overview',    label:'Overview',      icon:'▦' },
+  { id:'schedule',    label:'Schedule',      icon:'📆' },
   { id:'bookings',    label:'Bookings',      icon:'📅' },
   { id:'courts',      label:'Courts',        icon:'🏓' },
   { id:'menu',        label:'Food & drinks', icon:'🍱' },
@@ -117,6 +119,7 @@ export default function AdminDashboard() {
   const renderTab = () => {
     switch (activeTab) {
       case 'overview':    return <OverviewTab toast={toast} />;
+      case 'schedule':    return <ScheduleTab toast={toast} />;
       case 'bookings':    return <BookingsTab toast={toast} />;
       case 'courts':      return <CourtsTab toast={toast} />;
       case 'menu':        return <MenuTab toast={toast} />;
@@ -172,7 +175,7 @@ export default function AdminDashboard() {
         <div style={{ padding:'18px 16px', borderBottom:'1px solid var(--border)', flexShrink:0 }}>
           <a href="/" style={{ display:'flex', alignItems:'center', gap:8, textDecoration:'none', color:'var(--text-primary)' }}>
             <div style={{ width:8, height:8, background:'var(--accent)', borderRadius:'50%' }}/>
-            <span style={{ fontSize:17, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em' }}>Picklverse</span>
+            <span style={{ fontSize:17, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em' }}>PickleHub</span>
           </a>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
             <div style={{ fontSize:10, color:'var(--accent)', letterSpacing:'0.1em', textTransform:'uppercase', marginTop:4, fontFamily:"'Barlow',sans-serif" }}>Admin panel</div>
@@ -235,11 +238,11 @@ export default function AdminDashboard() {
       {/* MOBILE BOTTOM NAV */}
       <div className="admin-bottom-nav">
         {[
-          { id:'overview', icon:'▦', label:'Home' },
-          { id:'bookings', icon:'📅', label:'Bookings' },
-          { id:'courts',   icon:'🏓', label:'Courts' },
-          { id:'menu',     icon:'🍱', label:'Menu' },
-          { id:'admins',   icon:'🔐', label:'Admins' },
+          { id:'overview',  icon:'▦',  label:'Home' },
+          { id:'schedule',  icon:'📆', label:'Schedule' },
+          { id:'bookings',  icon:'📅', label:'Bookings' },
+          { id:'courts',    icon:'🏓', label:'Courts' },
+          { id:'admins',    icon:'🔐', label:'Admins' },
         ].map(item => (
           <button key={item.id} className={`abn-item ${activeTab === item.id ? 'active' : ''}`} onClick={() => setActiveTab(item.id)}>
             <span className="abn-icon">{item.icon}</span>
