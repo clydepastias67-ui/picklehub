@@ -287,7 +287,7 @@ export default function TournamentsTab({ toast }: { toast: (msg: string) => void
     const { data: existing } = await supabase
       .from('tournament_matches')
       .select('id')
-      .eq('tournament_id', tournament.id);
+      .eq('tournament_id', tournament.id)
       .limit(1);
 
     if (existing && existing.length > 0) {
@@ -377,7 +377,7 @@ export default function TournamentsTab({ toast }: { toast: (msg: string) => void
       }
     }
 
-    await supabase.from('tournaments').update({ status: 'ongoing' }).eq('tournament_id', tournament.id);
+    await supabase.from('tournaments').update({ status: 'ongoing' }).eq('id', tournament.id);
 
     await fetchTournaments();
     toast(`✓ Bracket generated for ${tournament.name}!`);
