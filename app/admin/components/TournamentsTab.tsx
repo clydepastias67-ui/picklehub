@@ -287,7 +287,7 @@ export default function TournamentsTab({ toast }: { toast: (msg: string) => void
     const { data: existing } = await supabase
       .from('tournament_matches')
       .select('id')
-      .eq('tournament_id', tournament.id)
+      .eq('tournament_id', tournament.id);
       .limit(1);
 
     if (existing && existing.length > 0) {
@@ -298,9 +298,8 @@ export default function TournamentsTab({ toast }: { toast: (msg: string) => void
 
     const { data: regs, error: regErr } = await supabase
       .from('tournament_registrations')
-      .select('user_id, player_name')
-      .eq('tournament_id', tournament.id)
-      .eq('status', 'confirmed');
+      .select('user_id, email')
+      .eq('tournament_id', tournament.id);
 
     if (regErr) { toast('■ ' + regErr.message); setGenerating(null); return; }
     if (!regs || regs.length < 2) {
@@ -321,8 +320,8 @@ export default function TournamentsTab({ toast }: { toast: (msg: string) => void
       regs.map(r => ({
         user_id: r.user_id,
         player_name:
-          r.player_name ||
           profileMap[r.user_id] ||
+          (r.email ? r.email.split('@')[0] : null) ||
           r.user_id.slice(0, 8),
       }))
     );
@@ -378,7 +377,7 @@ export default function TournamentsTab({ toast }: { toast: (msg: string) => void
       }
     }
 
-    await supabase.from('tournaments').update({ status: 'ongoing' }).eq('id', tournament.id);
+    await supabase.from('tournaments').update({ status: 'ongoing' }).eq('tournament_id', tournament.id);
 
     await fetchTournaments();
     toast(`✓ Bracket generated for ${tournament.name}!`);
