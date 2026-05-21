@@ -122,22 +122,10 @@ export default function TournamentsPage() {
     try {
       const supabase = createClient();
 
-      // Resolve the player's display name from their profile so it's available
-      // when the admin generates the bracket later.
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', user.id)
-        .single();
-      const playerName = (profile as { full_name?: string } | null)?.full_name
-        || user.email?.split('@')[0]
-        || user.id.slice(0, 8);
-
       const { data: regData, error } = await supabase.from('tournament_registrations').insert({
         tournament_id: tournament.id,
         user_id: user.id,
         email: user.email || '',
-        player_name: playerName,
       }).select().single();
       if (error) throw error;
       setRegistrations(prev => [...prev, { tournament_id: tournament.id }]);
