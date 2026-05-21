@@ -16,7 +16,7 @@ export async function POST(req: Request) {
 
     const encoded = Buffer.from(`${secretKey}:`).toString('base64');
 
-    const response = await fetch('https://api.paymongo.com/v1/links', {
+    const response = await fetch('https://api.paymongo.com/v1/checkout_sessions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -25,14 +25,23 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         data: {
           attributes: {
-            amount: Math.round(amount * 100),
+            billing: { name: 'Customer' },
+            line_items: [
+              {
+                currency: 'PHP',
+                amount: Math.round(amount * 100),
+                name: description,
+                quantity: 1,
+              },
+            ],
+            payment_method_types: ['card', 'gcash', 'paymaya', 'grab_pay'],
+            success_url: `${process.env.NEXT_PUBLIC_APP_URL}/payment/success`,
+            cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/payment/failed`,
             description,
-            currency: 'PHP',
-            remarks: `${type}:${referenceId}`,
-            redirect: {
-              success: `${process.env.NEXT_PUBLIC_APP_URL}/payment/success`,
-              failed: `${process.env.NEXT_PUBLIC_APP_URL}/payment/failed`,
-            },
+            metadata: { type, referenceId },
+            send_email_receipt: false,
+            show_description: true,
+            show_line_items: true,
           },
         },
       }),
@@ -43,15 +52,14 @@ export async function POST(req: Request) {
     if (!response.ok) {
       console.error('PayMongo error:', data);
       return NextResponse.json(
-        { error: data.errors?.[0]?.detail || 'Payment link creation failed' },
+        { error: data.errors?.[0]?.detail || 'Payment session creation failed' },
         { status: 400 }
       );
     }
 
     return NextResponse.json({
       checkoutUrl: data.data.attributes.checkout_url,
-      linkId: data.data.id,
-      referenceNumber: data.data.attributes.reference_number,
+      sessionId: data.data.id,
     });
 
   } catch (err) {

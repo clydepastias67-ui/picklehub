@@ -54,17 +54,25 @@ export async function POST(req: Request) {
     const eventType = body.data?.attributes?.type;
     const paymentData = body.data?.attributes?.data;
 
-    // Only handle successful payments
-    if (eventType !== 'link.payment.paid') {
+    // Handle both link and checkout session payment events
+    if (eventType !== 'link.payment.paid' && eventType !== 'checkout_session.payment.paid') {
       return NextResponse.json({ received: true });
     }
 
-    const remarks = paymentData?.attributes?.remarks || '';
-    const [type, referenceId] = remarks.split(':');
+    // Checkout sessions store type/referenceId in metadata; links use remarks
+    let type: string, referenceId: string;
+    if (eventType === 'checkout_session.payment.paid') {
+      const metadata = body.data?.attributes?.metadata || {};
+      type = metadata.type;
+      referenceId = metadata.referenceId;
+    } else {
+      const remarks = paymentData?.attributes?.remarks || '';
+      [type, referenceId] = remarks.split(':');
+    }
 
     if (!type || !referenceId) {
-      console.error('Invalid remarks format:', remarks);
-      return NextResponse.json({ error: 'Invalid remarks' }, { status: 400 });
+      console.error('Invalid payment metadata/remarks:', { type, referenceId });
+      return NextResponse.json({ error: 'Invalid payment metadata' }, { status: 400 });
     }
 
     // ── Shop: reference is a payment_reference shared across all cart orders ──
@@ -138,11 +146,27 @@ export async function POST(req: Request) {
       return NextResponse.json({ received: true });
     }
 
-    // ── All other types: simple status update ──
+    // ── Tournament: no status column — payment confirms the registration row exists ──
+    if (type === 'tournament') {
+      const { data: reg, error } = await supabaseAdmin
+        .from('tournament_registrations')
+        .select('id, tournament_id, user_id')
+        .eq('id', referenceId)
+        .single();
+
+      if (error || !reg) {
+        console.error('Tournament registration not found:', error);
+        return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
+      }
+
+      console.log(`✅ Tournament payment confirmed: registration ${referenceId}`);
+      return NextResponse.json({ received: true });
+    }
+
+    // ── Booking / Coaching: simple status update ──
     const tableMap: Record<string, string> = {
-      booking:    'bookings',
-      coaching:   'coaching_sessions',
-      tournament: 'tournament_registrations',
+      booking:  'bookings',
+      coaching: 'coaching_sessions',
     };
 
     const table = tableMap[type];
