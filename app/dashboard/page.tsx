@@ -48,7 +48,7 @@ export default function Dashboard() {
       const [{ data:b }, { data:s }, { data:t }, { data:adminData }, { data:f }, { data:so }] = await Promise.all([
         supabase.from('bookings').select('*,courts(name,type)').eq('user_id', user.id).order('start_time', { ascending:false }),
         supabase.from('coaching_sessions').select('*,coaches(name,skill_level)').eq('user_id', user.id).order('session_time', { ascending:false }),
-        supabase.from('tournament_registrations').select('*,tournaments(name,date,status,format)').eq('user_id', user.id).order('created_at', { ascending:false }),
+        supabase.from('tournament_registrations').select('*,tournaments(name,date,status,format)').eq('user_id', user.id).order('registered_at', { ascending:false }),
         supabase.from('admins').select('email').eq('email', user.email).single(),
         supabase.from('food_orders').select('*').eq('user_id', user.id).order('created_at', { ascending:false }),
         supabase.from('shop_orders').select('*,products(name,category)').eq('user_id', user.id).order('created_at', { ascending:false }),
