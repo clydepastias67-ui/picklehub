@@ -76,17 +76,11 @@ type MatchInsert = {
   loser_next_match_id?: string | null;
 };
 
-/**
- * Single elimination bracket.
- * Pads to next power-of-two with byes; byes are auto-completed and the real
- * player advances immediately so they never appear as a playable match.
- */
 function buildSingleElim(players: Player[], tournamentId: string): MatchInsert[] {
   const size    = nextPow2(players.length);
   const numRounds = Math.log2(size);
   const matches: MatchInsert[] = [];
 
-  // Round 1 — seed players in, fill rest with byes
   const r1Count = size / 2;
   for (let i = 0; i < r1Count; i++) {
     const p1 = players[i * 2]     ?? null;
@@ -108,7 +102,6 @@ function buildSingleElim(players: Player[], tournamentId: string): MatchInsert[]
     });
   }
 
-  // Subsequent rounds — empty slots filled by winner advancement
   for (let r = 2; r <= numRounds; r++) {
     const count = size / Math.pow(2, r);
     for (let i = 0; i < count; i++) {
@@ -116,7 +109,7 @@ function buildSingleElim(players: Player[], tournamentId: string): MatchInsert[]
         tournament_id: tournamentId,
         round: r,
         match_number: i + 1,
-        bracket: r === numRounds ? 'winners' : 'winners', // final is still 'winners'
+        bracket: 'winners',
         format: 'single_elim',
         player1_id: null, player1_name: null,
         player2_id: null, player2_name: null,
@@ -129,10 +122,6 @@ function buildSingleElim(players: Player[], tournamentId: string): MatchInsert[]
   return matches;
 }
 
-/**
- * Round robin — every player plays every other player exactly once.
- * Uses the circle (polygon) algorithm for even n; adds a bye for odd n.
- */
 function buildRoundRobin(players: Player[], tournamentId: string): MatchInsert[] {
   const ps = [...players];
   if (ps.length % 2 !== 0) ps.push({ user_id: 'bye', player_name: 'BYE' });
@@ -144,7 +133,7 @@ function buildRoundRobin(players: Player[], tournamentId: string): MatchInsert[]
     for (let i = 0; i < n / 2; i++) {
       const p1 = ps[i];
       const p2 = ps[n - 1 - i];
-      if (p1.user_id === 'bye' || p2.user_id === 'bye') continue; // skip bye pairs
+      if (p1.user_id === 'bye' || p2.user_id === 'bye') continue;
       matches.push({
         tournament_id: tournamentId,
         round: round + 1,
@@ -157,24 +146,17 @@ function buildRoundRobin(players: Player[], tournamentId: string): MatchInsert[]
         status: 'pending',
       });
     }
-    // Rotate: fix ps[0], rotate the rest
     ps.splice(1, 0, ps.pop()!);
   }
 
   return matches;
 }
 
-/**
- * Double elimination — winners bracket + losers bracket + grand final.
- * Returns matches WITHOUT next_match_id links (those are wired after DB insert
- * once we have real UUIDs).
- */
 function buildDoubleElim(players: Player[], tournamentId: string): MatchInsert[] {
   const size      = nextPow2(players.length);
   const wRounds   = Math.log2(size);
   const matches: MatchInsert[] = [];
 
-  // ── Winners bracket ──
   const r1Count = size / 2;
   for (let i = 0; i < r1Count; i++) {
     const p1 = players[i * 2]     ?? null;
@@ -211,8 +193,6 @@ function buildDoubleElim(players: Player[], tournamentId: string): MatchInsert[]
     }
   }
 
-  // ── Losers bracket ──
-  // LB has 2*(wRounds-1) rounds; each WB round feeds one LB round
   const lRounds = 2 * (wRounds - 1);
   for (let r = 1; r <= lRounds; r++) {
     const count = Math.max(1, size / Math.pow(2, Math.ceil(r / 2) + 1));
@@ -231,7 +211,6 @@ function buildDoubleElim(players: Player[], tournamentId: string): MatchInsert[]
     }
   }
 
-  // ── Grand final ──
   matches.push({
     tournament_id: tournamentId,
     round: 1,
@@ -305,7 +284,6 @@ export default function TournamentsTab({ toast }: { toast: (msg: string) => void
 
     setGenerating(tournament.id);
 
-    // Check for existing matches
     const { data: existing } = await supabase
       .from('tournament_matches')
       .select('id')
@@ -318,7 +296,6 @@ export default function TournamentsTab({ toast }: { toast: (msg: string) => void
       return;
     }
 
-    // Fetch confirmed registrations + player names from profiles
     const { data: regs, error: regErr } = await supabase
       .from('tournament_registrations')
       .select('user_id, player_name, profiles(full_name)')
@@ -332,7 +309,6 @@ export default function TournamentsTab({ toast }: { toast: (msg: string) => void
       return;
     }
 
-    // Resolve display name: prefer stored player_name, fall back to profile full_name, then email prefix
     const players: Player[] = shuffle(
       regs.map(r => ({
         user_id: r.user_id,
@@ -343,22 +319,19 @@ export default function TournamentsTab({ toast }: { toast: (msg: string) => void
       }))
     );
 
-    // Build match rows for the chosen format
     let matchRows: MatchInsert[];
     if (tournament.format === 'round_robin') {
       matchRows = buildRoundRobin(players, tournament.id);
     } else if (tournament.format === 'double_elim') {
       matchRows = buildDoubleElim(players, tournament.id);
     } else {
-      // single_elim (default) — also handles 'swiss' as single elim for now
       matchRows = buildSingleElim(players, tournament.id);
     }
 
-    // Insert all matches
     const { data: inserted, error: insertErr } = await supabase
       .from('tournament_matches')
       .insert(matchRows)
-      .select('id, round, match_number, bracket, status, player1_id');
+      .select('id, round, match_number, bracket, status, player1_id, player1_name');
 
     if (insertErr || !inserted) {
       toast('■ Failed to insert matches: ' + (insertErr?.message ?? 'unknown error'));
@@ -366,18 +339,14 @@ export default function TournamentsTab({ toast }: { toast: (msg: string) => void
       return;
     }
 
-    // ── Wire next_match_id links for elimination brackets ──
     if (tournament.format === 'single_elim') {
-      // For each R1 match, find its parent in R2 and set next_match_id
       await wireSingleElimLinks(inserted, tournament.id);
     } else if (tournament.format === 'double_elim') {
       await wireDoubleElimLinks(inserted, tournament.id);
     }
 
-    // Auto-advance bye matches in round 1
     const byeMatches = inserted.filter(m => m.status === 'bye');
     for (const bm of byeMatches) {
-      // The winner of a bye is the player who is present (player1)
       if (!bm.player1_id) continue;
       const { data: fullBye } = await supabase
         .from('tournament_matches')
@@ -401,7 +370,6 @@ export default function TournamentsTab({ toast }: { toast: (msg: string) => void
       }
     }
 
-    // Set tournament to ongoing
     await supabase.from('tournaments').update({ status: 'ongoing' }).eq('id', tournament.id);
 
     await fetchTournaments();
@@ -409,7 +377,6 @@ export default function TournamentsTab({ toast }: { toast: (msg: string) => void
     setGenerating(null);
   };
 
-  // Wire next_match_id for single elimination after DB insert (we now have real UUIDs)
   const wireSingleElimLinks = async (
     inserted: { id: string; round: number; match_number: number; bracket: string }[],
     tournamentId: string
@@ -424,7 +391,7 @@ export default function TournamentsTab({ toast }: { toast: (msg: string) => void
     }
     const rounds = Object.keys(byRound).map(Number).sort((a, b) => a - b);
 
-    const updates: Promise<unknown>[] = [];
+    const updates: PromiseLike<unknown>[] = [];
     for (let ri = 0; ri < rounds.length - 1; ri++) {
       const current = byRound[rounds[ri]];
       const next    = byRound[rounds[ri + 1]];
@@ -437,13 +404,13 @@ export default function TournamentsTab({ toast }: { toast: (msg: string) => void
             .update({ next_match_id: nextMatch.id })
             .eq('id', current[i].id)
             .eq('tournament_id', tournamentId)
+            .then()
         );
       }
     }
     await Promise.all(updates);
   };
 
-  // Wire next_match_id + loser_next_match_id for double elimination
   const wireDoubleElimLinks = async (
     inserted: { id: string; round: number; match_number: number; bracket: string }[],
     tournamentId: string
@@ -458,7 +425,7 @@ export default function TournamentsTab({ toast }: { toast: (msg: string) => void
     for (const m of losers)  { if (!lByRound[m.round]) lByRound[m.round] = [];  lByRound[m.round].push(m); }
 
     const wRounds = Object.keys(wByRound).map(Number).sort((a, b) => a - b);
-    const updates: Promise<unknown>[] = [];
+    const updates: PromiseLike<unknown>[] = [];
 
     // Winners → Winners advancement
     for (let ri = 0; ri < wRounds.length - 1; ri++) {
@@ -467,7 +434,13 @@ export default function TournamentsTab({ toast }: { toast: (msg: string) => void
       for (let i = 0; i < cur.length; i++) {
         const nextMatch = next?.[Math.floor(i / 2)];
         if (nextMatch) {
-          updates.push(supabase.from('tournament_matches').update({ next_match_id: nextMatch.id }).eq('id', cur[i].id).eq('tournament_id', tournamentId));
+          updates.push(
+            supabase.from('tournament_matches')
+              .update({ next_match_id: nextMatch.id })
+              .eq('id', cur[i].id)
+              .eq('tournament_id', tournamentId)
+              .then()
+          );
         }
       }
     }
@@ -475,7 +448,13 @@ export default function TournamentsTab({ toast }: { toast: (msg: string) => void
     // Winners final → grand final
     const lastWRound = wByRound[wRounds[wRounds.length - 1]];
     if (lastWRound?.[0] && grandFinal) {
-      updates.push(supabase.from('tournament_matches').update({ next_match_id: grandFinal.id }).eq('id', lastWRound[0].id).eq('tournament_id', tournamentId));
+      updates.push(
+        supabase.from('tournament_matches')
+          .update({ next_match_id: grandFinal.id })
+          .eq('id', lastWRound[0].id)
+          .eq('tournament_id', tournamentId)
+          .then()
+      );
     }
 
     // Losers → Losers advancement
@@ -486,7 +465,13 @@ export default function TournamentsTab({ toast }: { toast: (msg: string) => void
       for (let i = 0; i < cur.length; i++) {
         const nextMatch = next?.[Math.floor(i / 2)];
         if (nextMatch) {
-          updates.push(supabase.from('tournament_matches').update({ next_match_id: nextMatch.id }).eq('id', cur[i].id).eq('tournament_id', tournamentId));
+          updates.push(
+            supabase.from('tournament_matches')
+              .update({ next_match_id: nextMatch.id })
+              .eq('id', cur[i].id)
+              .eq('tournament_id', tournamentId)
+              .then()
+          );
         }
       }
     }
@@ -494,7 +479,13 @@ export default function TournamentsTab({ toast }: { toast: (msg: string) => void
     // Losers final → grand final
     const lastLRound = lByRound[lRoundNums[lRoundNums.length - 1]];
     if (lastLRound?.[0] && grandFinal) {
-      updates.push(supabase.from('tournament_matches').update({ next_match_id: grandFinal.id }).eq('id', lastLRound[0].id).eq('tournament_id', tournamentId));
+      updates.push(
+        supabase.from('tournament_matches')
+          .update({ next_match_id: grandFinal.id })
+          .eq('id', lastLRound[0].id)
+          .eq('tournament_id', tournamentId)
+          .then()
+      );
     }
 
     // Winners R1 losers → LB R1 (drop-down)
@@ -503,7 +494,13 @@ export default function TournamentsTab({ toast }: { toast: (msg: string) => void
     for (let i = 0; i < wR1.length; i++) {
       const lbMatch = lbR1[Math.floor(i / 2)];
       if (lbMatch) {
-        updates.push(supabase.from('tournament_matches').update({ loser_next_match_id: lbMatch.id }).eq('id', wR1[i].id).eq('tournament_id', tournamentId));
+        updates.push(
+          supabase.from('tournament_matches')
+            .update({ loser_next_match_id: lbMatch.id })
+            .eq('id', wR1[i].id)
+            .eq('tournament_id', tournamentId)
+            .then()
+        );
       }
     }
 
