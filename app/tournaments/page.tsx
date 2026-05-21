@@ -121,10 +121,23 @@ export default function TournamentsPage() {
     setRegistering(tournament.id); setError('');
     try {
       const supabase = createClient();
+
+      // Resolve the player's display name from their profile so it's available
+      // when the admin generates the bracket later.
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+      const playerName = (profile as { full_name?: string } | null)?.full_name
+        || user.email?.split('@')[0]
+        || user.id.slice(0, 8);
+
       const { data: regData, error } = await supabase.from('tournament_registrations').insert({
         tournament_id: tournament.id,
         user_id: user.id,
         email: user.email || '',
+        player_name: playerName,
       }).select().single();
       if (error) throw error;
       setRegistrations(prev => [...prev, { tournament_id: tournament.id }]);
@@ -151,9 +164,19 @@ export default function TournamentsPage() {
   const handleUnregister = async (tournamentId: string) => {
     if (!user) return;
     const supabase = createClient();
-    await supabase.from('tournament_registrations').delete().eq('tournament_id', tournamentId).eq('user_id', user.id);
+    const { error } = await supabase
+      .from('tournament_registrations')
+      .delete()
+      .eq('tournament_id', tournamentId)
+      .eq('user_id', user.id);
+    if (error) { setError('Failed to unregister: ' + error.message); setTimeout(() => setError(''), 3000); return; }
     setRegistrations(prev => prev.filter(r => r.tournament_id !== tournamentId));
-    setCounts(prev => ({ ...prev, [tournamentId]: Math.max(0, (prev[tournamentId] || 1) - 1) }));
+    // Re-fetch the authoritative count rather than decrementing blindly
+    const { count } = await supabase
+      .from('tournament_registrations')
+      .select('*', { count: 'exact', head: true })
+      .eq('tournament_id', tournamentId);
+    setCounts(prev => ({ ...prev, [tournamentId]: count ?? Math.max(0, (prev[tournamentId] || 1) - 1) }));
   };
 
   const filtered = filter === 'all' ? tournaments : tournaments.filter(t => t.status === filter);

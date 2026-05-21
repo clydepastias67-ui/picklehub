@@ -61,6 +61,8 @@ export default function ScoreboardPage() {
         setMatch(data);
         setP1Score(data.player1_score || 0);
         setP2Score(data.player2_score || 0);
+        setP1Sets((data as unknown as { player1_sets?: number }).player1_sets || 0);
+        setP2Sets((data as unknown as { player2_sets?: number }).player2_sets || 0);
       }
       setLoading(false);
     };
@@ -85,6 +87,8 @@ export default function ScoreboardPage() {
     await supabase.from('tournament_matches').update({
       player1_score: p1Score,
       player2_score: p2Score,
+      player1_sets: p1Sets,
+      player2_sets: p2Sets,
       status: 'ongoing',
     }).eq('id', match.id);
     setSaving(false);
@@ -106,6 +110,8 @@ export default function ScoreboardPage() {
     await supabase.from('tournament_matches').update({
       player1_score: p1Score,
       player2_score: p2Score,
+      player1_sets: p1Sets,
+      player2_sets: p2Sets,
       winner_id: winnerId,
       status: 'completed',
     }).eq('id', match.id);
@@ -201,7 +207,7 @@ export default function ScoreboardPage() {
           <div>
             <div style={{ fontSize: 15, fontWeight: 800, textTransform: 'uppercase' }}>{match.tournaments?.name || 'Tournament'}</div>
             <div style={{ fontSize: 11, color: 'var(--accent)', fontFamily: "'Barlow',sans-serif" }}>
-              {formatLabel[match.format]} · {bracketLabel[match.bracket] || match.bracket} · Round {match.round}, Match {match.match_number}
+              {formatLabel[match.format || match.tournaments?.format || ''] || match.tournaments?.format || match.format} · {bracketLabel[match.bracket] || match.bracket} · Round {match.round}, Match {match.match_number}
             </div>
           </div>
         </div>
@@ -308,4 +314,4 @@ export default function ScoreboardPage() {
       </div>
     </div>
   );
-}   
+}
