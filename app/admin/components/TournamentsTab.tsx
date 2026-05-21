@@ -298,7 +298,7 @@ export default function TournamentsTab({ toast }: { toast: (msg: string) => void
 
     const { data: regs, error: regErr } = await supabase
       .from('tournament_registrations')
-      .select('user_id, player_name, profiles(full_name)')
+      .select('user_id, player_name')
       .eq('tournament_id', tournament.id)
       .eq('status', 'confirmed');
 
@@ -309,12 +309,20 @@ export default function TournamentsTab({ toast }: { toast: (msg: string) => void
       return;
     }
 
+    const userIds = regs.map(r => r.user_id).filter(Boolean);
+    const { data: profilesData } = userIds.length
+      ? await supabase.from('profiles').select('id, full_name').in('id', userIds)
+      : { data: [] };
+    const profileMap = Object.fromEntries(
+      (profilesData ?? []).map((p: { id: string; full_name: string }) => [p.id, p.full_name])
+    );
+
     const players: Player[] = shuffle(
       regs.map(r => ({
         user_id: r.user_id,
         player_name:
           r.player_name ||
-          (r.profiles as unknown as { full_name?: string } | null)?.full_name ||
+          profileMap[r.user_id] ||
           r.user_id.slice(0, 8),
       }))
     );
